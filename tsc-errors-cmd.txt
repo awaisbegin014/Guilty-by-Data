@@ -1,0 +1,14 @@
+src/App.tsx(1,17): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/RoundCard.tsx(2,56): error TS2307: Cannot find module '../ui/Card' or its corresponding type declarations.
+src/components/RoundCard.tsx(3,24): error TS2307: Cannot find module '../ui/Button' or its corresponding type declarations.
+src/components/RoundCard.tsx(4,23): error TS2307: Cannot find module '../ui/Badge' or its corresponding type declarations.
+src/components/RoundCard.tsx(5,38): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/config/competitionConfig.ts(1,10): error TS1484: 'CompetitionConfig' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/data/mockData.ts(1,10): error TS1484: 'Round' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/data/mockData.ts(1,17): error TS1484: 'LeaderboardEntry' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/pages/auth/TeamLoginPage.tsx(4,26): error TS6133: 'CardHeader' is declared but its value is never read.
+src/pages/dashboard/DashboardPage.tsx(12,13): error TS6133: 'team' is declared but its value is never read.
+src/pages/leaderboard/LeaderboardPage.tsx(5,16): error TS6133: 'CardBody' is declared but its value is never read.
+src/store/useAppStore.ts(3,10): error TS1484: 'Team' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/store/useAppStore.ts(3,16): error TS1484: 'RoundProgress' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/utils/cn.ts(1,1): error TS6133: 'React' is declared but its value is never read.
