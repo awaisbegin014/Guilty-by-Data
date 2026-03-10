@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { validTeams } from '../../data/mockData';
 import { Search, User, KeyRound, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const TeamLoginPage: React.FC = () => {
     const [teamName, setTeamName] = useState('');
@@ -40,101 +41,76 @@ export const TeamLoginPage: React.FC = () => {
     };
 
     return (
-        <div style={{
-            minHeight: 'calc(100vh - 64px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '2rem 1rem',
-            background: 'var(--bg-base)',
-        }}>
-            <div style={{ width: '100%', maxWidth: '420px' }} className="animate-fade-in">
-
+        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-8 bg-background">
+            <motion.div
+                className="w-full max-w-[420px]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+            >
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <div style={{
-                        width: '56px', height: '56px', borderRadius: '14px',
-                        background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 1rem',
-                        boxShadow: '0 4px 12px rgba(15,23,42,0.25)',
-                    }}>
-                        <Search size={26} color="#f8fafc" />
+                <div className="text-center mb-8">
+                    <div className="w-14 h-14 rounded-[14px] bg-slate-900 flex items-center justify-center mx-auto mb-4 shadow-[0_4px_12px_rgba(15,23,42,0.25)]">
+                        <Search size={26} className="text-slate-50" />
                     </div>
-                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.375rem' }}>
+                    <h1 className="text-[1.6rem] font-extrabold text-slate-900 mb-1.5">
                         Case Access Portal
                     </h1>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                    <p className="text-sm text-muted-foreground">
                         Enter your team credentials to begin the investigation.
                     </p>
                 </div>
 
                 {/* Card */}
-                <div style={{
-                    background: '#fff',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-                    overflow: 'hidden',
-                }}>
-                    <div style={{ padding: '2rem' }}>
-                        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-
+                <div className="bg-white border border-border rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden">
+                    <div className="p-8">
+                        <form onSubmit={handleLogin} className="flex flex-col gap-5">
                             {/* Error */}
                             {error && (
-                                <div style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '0.625rem',
-                                    padding: '0.75rem 1rem',
-                                    background: 'var(--error-bg)', border: '1px solid var(--error-border)',
-                                    borderRadius: '10px', color: 'var(--error-text)',
-                                    fontSize: '0.85rem', fontWeight: 500,
-                                }}>
-                                    <AlertCircle size={16} style={{ marginTop: '1px', flexShrink: 0 }} />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="flex items-start gap-2.5 px-4 py-3 bg-error-bg border border-error-border rounded-[10px] text-error-text text-[0.85rem] font-medium"
+                                >
+                                    <AlertCircle size={16} className="mt-px shrink-0" />
                                     <span>{error}</span>
-                                </div>
+                                </motion.div>
                             )}
 
                             {/* Team Name */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[0.8rem] font-bold text-slate-600 uppercase tracking-wide">
                                     Team Name
                                 </label>
-                                <div style={{ position: 'relative' }}>
-                                    <User size={16} style={{
-                                        position: 'absolute', left: '12px', top: '50%',
-                                        transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none',
-                                    }} />
+                                <div className="relative">
+                                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input
                                         id="teamName"
                                         type="text"
-                                        className="input"
-                                        style={{ paddingLeft: '2.25rem' }}
                                         placeholder="e.g. Team Alpha"
                                         value={teamName}
                                         onChange={(e) => setTeamName(e.target.value)}
                                         autoFocus
                                         autoComplete="off"
+                                        className="w-full pl-9 pr-4 py-2.5 border-[1.5px] border-slate-300 rounded-[10px] bg-white text-slate-900 text-[0.9rem] outline-none font-sans leading-relaxed transition-colors duration-150 focus:border-primary focus:shadow-[0_0_0_3px_rgb(15_23_42/0.1)] placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
 
                             {/* Access Key */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[0.8rem] font-bold text-slate-600 uppercase tracking-wide">
                                     Access Key
                                 </label>
-                                <div style={{ position: 'relative' }}>
-                                    <KeyRound size={16} style={{
-                                        position: 'absolute', left: '12px', top: '50%',
-                                        transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none',
-                                    }} />
+                                <div className="relative">
+                                    <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                     <input
                                         id="password"
                                         type="password"
-                                        className="input"
-                                        style={{ paddingLeft: '2.25rem' }}
                                         placeholder="••••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2.5 border-[1.5px] border-slate-300 rounded-[10px] bg-white text-slate-900 text-[0.9rem] outline-none font-sans leading-relaxed transition-colors duration-150 focus:border-primary focus:shadow-[0_0_0_3px_rgb(15_23_42/0.1)] placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
@@ -143,25 +119,10 @@ export const TeamLoginPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                style={{
-                                    marginTop: '0.5rem',
-                                    width: '100%', padding: '0.75rem',
-                                    background: isLoading ? '#334155' : '#0f172a',
-                                    color: '#fff', border: 'none',
-                                    borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700,
-                                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                                    letterSpacing: '0.01em',
-                                    transition: 'background 0.15s ease',
-                                    opacity: isLoading ? 0.7 : 1,
-                                }}
-                                onMouseOver={e => { if (!isLoading) (e.currentTarget as HTMLButtonElement).style.background = '#1e293b'; }}
-                                onMouseOut={e => { if (!isLoading) (e.currentTarget as HTMLButtonElement).style.background = '#0f172a'; }}
+                                className="mt-2 w-full py-3 bg-slate-900 text-white border-none rounded-[10px] text-[0.9rem] font-bold cursor-pointer flex items-center justify-center gap-2 tracking-tight transition-all duration-150 hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-slate-700"
                             >
                                 {isLoading ? (
-                                    <>
-                                        <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>Authenticating…</span>
-                                    </>
+                                    <span className="opacity-80 text-[0.85rem]">Authenticating…</span>
                                 ) : (
                                     'Access Case Files'
                                 )}
@@ -169,13 +130,13 @@ export const TeamLoginPage: React.FC = () => {
                         </form>
                     </div>
 
-                    <div style={{ padding: '0.875rem 2rem', borderTop: '1px solid var(--border)', background: 'var(--bg-elevated)', textAlign: 'center' }}>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+                    <div className="px-8 py-3.5 border-t border-border bg-muted text-center">
+                        <p className="text-xs text-slate-400">
                             Authorized personnel only · All access is logged
                         </p>
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };

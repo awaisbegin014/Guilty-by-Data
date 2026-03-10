@@ -1,9 +1,9 @@
 import React from 'react';
-
-
 import { Badge } from './ui/Badge';
 import type { Round, RoundProgress } from '../types';
 import { Lock, Play, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface RoundCardProps {
     round: Round;
@@ -27,50 +27,37 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isUnlocke
     const isSubmitted = status === 'submitted';
 
     return (
-        <div style={{
-            background: '#fff',
-            border: '1px solid var(--border)',
-            borderRadius: '14px',
-            overflow: 'hidden',
-            boxShadow: isLocked ? 'none' : 'var(--shadow-sm)',
-            opacity: isLocked ? 0.65 : 1,
-            transition: 'box-shadow 0.18s, transform 0.18s',
-            display: 'flex', alignItems: 'center',
-            ...(isSubmitted ? { borderLeft: '4px solid #16a34a' } : isLocked ? {} : { borderLeft: '4px solid #0f172a' }),
-        }}
-            onMouseOver={e => {
-                if (!isLocked) {
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)';
-                    (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)';
-                }
-            }}
-            onMouseOut={e => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = isLocked ? 'none' : 'var(--shadow-sm)';
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-            }}
+        <motion.div
+            className={cn(
+                'bg-white border border-border rounded-[14px] overflow-hidden flex items-center transition-[box-shadow,transform] duration-[0.18s]',
+                isLocked ? 'opacity-65' : 'shadow-sm',
+                !isLocked && 'hover:shadow-md hover:-translate-y-px',
+                isSubmitted ? 'border-l-4 border-l-green-600' : !isLocked ? 'border-l-4 border-l-slate-900' : ''
+            )}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: (roundIndex ?? 0) * 0.08 }}
         >
             {/* Round Number */}
-            <div style={{
-                width: '56px', flexShrink: 0, alignSelf: 'stretch',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: isLocked ? 'var(--bg-elevated)' : isSubmitted ? '#f0fdf4' : '#f8fafc',
-                borderRight: '1px solid var(--border)',
-            }}>
-                <span style={{
-                    fontFamily: 'var(--font-mono)', fontSize: '1rem', fontWeight: 700,
-                    color: isLocked ? '#94a3b8' : isSubmitted ? '#16a34a' : '#334155',
-                }}>
+            <div className={cn(
+                'w-14 shrink-0 self-stretch flex items-center justify-center border-r border-border',
+                isLocked ? 'bg-muted' : isSubmitted ? 'bg-green-50' : 'bg-slate-50'
+            )}>
+                <span className={cn(
+                    'font-mono text-base font-bold',
+                    isLocked ? 'text-slate-400' : isSubmitted ? 'text-green-600' : 'text-slate-700'
+                )}>
                     {(roundIndex ?? 0) + 1}
                 </span>
             </div>
 
             {/* Content */}
-            <div style={{ flex: 1, padding: '1rem 1.125rem', minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.375rem' }}>
-                    <h3 style={{
-                        fontSize: '0.95rem', fontWeight: 700, color: isLocked ? '#94a3b8' : '#0f172a',
-                        lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
+            <div className="flex-1 py-4 px-[1.125rem] min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <h3 className={cn(
+                        'text-[0.95rem] font-bold leading-snug truncate',
+                        isLocked ? 'text-slate-400' : 'text-slate-900'
+                    )}>
                         {round.title}
                     </h3>
                     <Badge variant={statusConfig.badge}>
@@ -79,17 +66,12 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isUnlocke
                     </Badge>
                 </div>
 
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '0.5rem' }}>
+                <p className="text-[0.82rem] text-muted-foreground leading-relaxed mb-2">
                     {round.description}
                 </p>
 
                 {status === 'in_progress' && progress?.timeRemainingMs !== null && progress?.timeRemainingMs !== undefined && (
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                        fontSize: '0.75rem', fontWeight: 600, color: '#b45309',
-                        background: '#fffbeb', border: '1px solid #fde68a',
-                        borderRadius: '6px', padding: '0.2rem 0.5rem',
-                    }}>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-0.5">
                         <Clock size={11} />
                         {Math.max(0, Math.floor(progress.timeRemainingMs / 60000))}m {Math.floor((progress.timeRemainingMs % 60000) / 1000)}s remaining
                     </div>
@@ -97,44 +79,26 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isUnlocke
             </div>
 
             {/* Action */}
-            <div style={{ padding: '0 1rem', flexShrink: 0 }}>
+            <div className="px-4 shrink-0">
                 {isLocked ? (
-                    <div style={{
-                        width: '36px', height: '36px', borderRadius: '10px',
-                        background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                        <Lock size={15} color="#94a3b8" />
+                    <div className="w-9 h-9 rounded-[10px] bg-muted border border-border flex items-center justify-center">
+                        <Lock size={15} className="text-slate-400" />
                     </div>
                 ) : (
                     <button
                         onClick={onAction}
-                        style={{
-                            display: 'flex', alignItems: 'center', gap: '0.375rem',
-                            padding: '0.5rem 0.875rem',
-                            background: isSubmitted ? 'transparent' : '#0f172a',
-                            border: isSubmitted ? '1px solid var(--border-strong)' : '1px solid #0f172a',
-                            borderRadius: '10px',
-                            color: isSubmitted ? '#334155' : '#fff',
-                            fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.15s ease',
-                        }}
-                        onMouseOver={e => {
-                            const el = e.currentTarget as HTMLButtonElement;
-                            if (isSubmitted) { el.style.background = 'var(--bg-elevated)'; }
-                            else { el.style.background = '#1e293b'; }
-                        }}
-                        onMouseOut={e => {
-                            const el = e.currentTarget as HTMLButtonElement;
-                            el.style.background = isSubmitted ? 'transparent' : '#0f172a';
-                        }}
+                        className={cn(
+                            'flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] text-[0.8rem] font-semibold cursor-pointer whitespace-nowrap transition-all duration-150',
+                            isSubmitted
+                                ? 'bg-transparent border border-slate-300 text-slate-700 hover:bg-muted'
+                                : 'bg-slate-900 border border-slate-900 text-white hover:bg-slate-800'
+                        )}
                     >
                         {statusConfig.btnText}
                         <ChevronRight size={14} />
                     </button>
                 )}
             </div>
-        </div>
+        </motion.div>
     );
 };

@@ -16,109 +16,65 @@ export const Layout: React.FC = () => {
     const isLeaderboard = location.pathname === '/leaderboard';
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div className="flex flex-col min-h-screen">
             {/* Header */}
-            <header style={{
-                background: '#0f172a',
-                borderBottom: '1px solid #1e293b',
-                position: 'sticky',
-                top: 0,
-                zIndex: 40,
-                height: '64px',
-            }}>
-                <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <header className="bg-slate-900 border-b border-slate-800/80 sticky top-0 z-40">
+                <div className="container h-[60px] flex items-center justify-between">
                     {/* Brand */}
                     <div
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: team ? 'pointer' : 'default' }}
+                        className={`flex items-center gap-3 ${team ? 'cursor-pointer' : 'cursor-default'}`}
                         onClick={() => team && navigate('/dashboard')}
                     >
-                        <div style={{
-                            width: '36px', height: '36px', borderRadius: '8px',
-                            background: '#1e293b', border: '1px solid #334155',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.8rem', color: '#e2e8f0', letterSpacing: '0.05em' }}>GbD</span>
+                        <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600/50 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                            <span className="font-mono font-bold text-[0.72rem] text-slate-200 tracking-widest">GbD</span>
                         </div>
                         <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc', lineHeight: 1.2 }}>Guilty by Data</div>
-                            <div style={{ fontSize: '0.7rem', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Corporate Forensics</div>
+                            <div className="font-bold text-[0.9rem] text-slate-50 leading-tight tracking-tight">Guilty by Data</div>
+                            <div className="text-[0.62rem] text-slate-500 tracking-[0.1em] uppercase font-semibold">Corporate Forensics</div>
                         </div>
                     </div>
 
                     {/* Nav Actions */}
                     {team && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
-                                <UserCircle size={18} />
-                                <span style={{ fontWeight: 500, color: '#cbd5e1' }}>{team.name}</span>
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-slate-800">
+                                <UserCircle size={15} className="text-slate-500" />
+                                <span className="text-[0.8rem] font-semibold text-slate-300">{team.name}</span>
                             </div>
 
-                            <div style={{ width: '1px', height: '20px', background: '#1e293b' }} />
+                            <div className="w-px h-4 bg-slate-800" />
 
                             <button
                                 onClick={() => navigate(isLeaderboard ? '/dashboard' : '/leaderboard')}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                    padding: '0.375rem 0.75rem', borderRadius: '8px',
-                                    background: 'transparent', border: '1px solid #1e293b',
-                                    color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500,
-                                    transition: 'all 0.15s ease',
-                                }}
-                                onMouseOver={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.background = '#1e293b';
-                                    (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
-                                }}
-                                onMouseOut={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                                    (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
-                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-transparent border border-slate-700/60 text-slate-400 cursor-pointer text-[0.78rem] font-semibold transition-all duration-150 hover:bg-slate-800 hover:text-slate-200 hover:border-slate-600"
                             >
-                                <Trophy size={14} />
+                                <Trophy size={13} />
                                 {isLeaderboard ? 'Dashboard' : 'Leaderboard'}
                             </button>
 
                             <button
                                 onClick={handleLogout}
                                 title="Log out"
-                                style={{
-                                    display: 'flex', alignItems: 'center',
-                                    padding: '0.375rem', borderRadius: '8px',
-                                    background: 'transparent', border: '1px solid transparent',
-                                    color: '#475569', cursor: 'pointer',
-                                    transition: 'all 0.15s ease',
-                                }}
-                                onMouseOver={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.color = '#ef4444';
-                                    (e.currentTarget as HTMLButtonElement).style.background = '#1e293b';
-                                }}
-                                onMouseOut={e => {
-                                    (e.currentTarget as HTMLButtonElement).style.color = '#475569';
-                                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                                }}
+                                className="flex items-center p-1.5 rounded-lg bg-transparent border border-transparent text-slate-600 cursor-pointer transition-all duration-150 hover:text-red-400 hover:bg-red-500/10"
                             >
-                                <LogOut size={16} />
+                                <LogOut size={15} />
                             </button>
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* Main */}
-            <main style={{ flex: 1 }}>
+            <main className="flex-1">
                 <Outlet />
             </main>
 
             {/* Footer */}
-            <footer style={{
-                borderTop: '1px solid var(--border)',
-                background: '#fff',
-                padding: '1.5rem 0',
-            }}>
-                <div className="container" style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
-                        © {new Date().getFullYear()} Guilty by Data — Competition Platform
+            <footer className="border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-50 py-5">
+                <div className="container text-center">
+                    <p className="text-[0.75rem] text-slate-400 font-medium">
+                        © {new Date().getFullYear()} Guilty by Data · Competition Platform
                     </p>
-                    <p style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
+                    <p className="text-[0.68rem] text-slate-300 mt-0.5 tracking-wide">
                         Data Analytics Investigation Simulation
                     </p>
                 </div>

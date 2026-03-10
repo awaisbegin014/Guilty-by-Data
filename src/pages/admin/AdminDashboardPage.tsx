@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Database, Activity, CheckSquare, AlertCircle, RefreshCw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const AdminDashboardPage: React.FC = () => {
     const { rounds, roundsProgress, resetParticipantProgress } = useAppStore();
@@ -15,86 +16,65 @@ export const AdminDashboardPage: React.FC = () => {
         if (window.confirm('Reset all participant progress? This cannot be undone.')) {
             resetParticipantProgress();
             alert('Participant progress has been reset.');
-            // Stay on admin dashboard — do NOT redirect to participant side
         }
     };
 
     const StatCard = ({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) => (
-        <div style={{
-            background: '#fff', borderRadius: '14px', padding: '1.5rem',
-            border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            transition: 'box-shadow 0.18s',
-        }}>
+        <div className="bg-white rounded-[14px] p-6 border border-border shadow-sm flex items-center justify-between transition-shadow duration-[0.18s]">
             <div>
-                <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>
-                    {label}
-                </p>
-                <p style={{ fontSize: '2.25rem', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
-                    {value}
-                </p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">{label}</p>
+                <p className="text-4xl font-extrabold text-slate-900 leading-none">{value}</p>
             </div>
-            <div style={{
-                width: '48px', height: '48px', borderRadius: '12px',
-                background: color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center`} style={{ background: color }}>
                 {icon}
             </div>
         </div>
     );
 
     const ActionCard = ({ title, desc, cta, path, accent }: { title: string; desc: string; cta: string; path: string; accent: string }) => (
-        <div
+        <motion.div
             onClick={() => navigate(path)}
-            style={{
-                background: '#fff', borderRadius: '14px', padding: '1.5rem',
-                border: '1px solid var(--border)', cursor: 'pointer',
-                borderLeft: `4px solid ${accent}`,
-                boxShadow: 'var(--shadow-sm)',
-                transition: 'box-shadow 0.18s, transform 0.18s',
-            }}
-            onMouseOver={e => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)';
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={e => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)';
-                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-            }}
+            className="bg-white rounded-[14px] p-6 border border-border cursor-pointer shadow-sm transition-[box-shadow,transform] duration-[0.18s] hover:shadow-md hover:-translate-y-0.5"
+            style={{ borderLeft: `4px solid ${accent}` }}
+            whileHover={{ y: -2 }}
         >
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>{title}</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: 1.6 }}>{desc}</p>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: accent }}>
+            <h3 className="text-base font-bold text-slate-900 mb-2">{title}</h3>
+            <p className="text-[0.85rem] text-muted-foreground mb-5 leading-relaxed">{desc}</p>
+            <span className="text-[0.8rem] font-semibold" style={{ color: accent }}>
                 {cta} →
             </span>
-        </div>
+        </motion.div>
     );
 
     return (
-        <div style={{ maxWidth: '880px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }} className="animate-fade-in">
-
+        <motion.div
+            className="max-w-[880px] mx-auto flex flex-col gap-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             {/* Page Header */}
             <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.375rem' }}>System Overview</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.925rem' }}>Monitor competition status and manage configurations.</p>
+                <h1 className="text-[1.75rem] font-extrabold text-slate-900 mb-1.5">System Overview</h1>
+                <p className="text-muted-foreground text-[0.925rem]">Monitor competition status and manage configurations.</p>
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div className="grid grid-cols-3 gap-4">
                 <StatCard label="Total Rounds" value={totalRounds}
-                    icon={<Database size={22} color="#2563eb" />} color="#eff6ff" />
+                    icon={<Database size={22} className="text-blue-600" />} color="#eff6ff" />
                 <StatCard label="In Progress" value={activeInvestigations}
-                    icon={<Activity size={22} color="#d97706" />} color="#fffbeb" />
+                    icon={<Activity size={22} className="text-amber-600" />} color="#fffbeb" />
                 <StatCard label="Completed" value={completedInvestigations}
-                    icon={<CheckSquare size={22} color="#16a34a" />} color="#f0fdf4" />
+                    icon={<CheckSquare size={22} className="text-green-600" />} color="#f0fdf4" />
             </div>
 
             {/* Quick Actions */}
             <div>
-                <h2 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-subtle)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <h2 className="text-[0.8rem] font-bold text-slate-400 mb-4 uppercase tracking-wide">
                     Mission Control
                 </h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="grid grid-cols-2 gap-4">
                     <ActionCard
                         title="Manage Rounds"
                         desc="Configure dataset links, open/close rounds, and edit round content for each investigation phase."
@@ -113,31 +93,18 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Reset + Info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="flex flex-col gap-4">
                 {/* Danger Zone */}
-                <div style={{
-                    background: '#fff5f5', border: '1px solid #fecaca', borderRadius: '14px',
-                    padding: '1.25rem 1.5rem',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem',
-                }}>
+                <div className="bg-red-50 border border-red-200 rounded-[14px] px-6 py-5 flex items-center justify-between gap-6">
                     <div>
-                        <h4 style={{ fontWeight: 700, color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
-                            Reset Participant Progress
-                        </h4>
-                        <p style={{ fontSize: '0.82rem', color: '#ef4444', lineHeight: 1.6 }}>
+                        <h4 className="font-bold text-red-700 text-[0.9rem] mb-1">Reset Participant Progress</h4>
+                        <p className="text-[0.82rem] text-red-500 leading-relaxed">
                             Clears all submitted answers, timers, and unlocks. Use for testing only.
                         </p>
                     </div>
                     <button
                         onClick={handleReset}
-                        style={{
-                            flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem',
-                            padding: '0.5rem 1rem', background: '#fff', border: '1px solid #fca5a5',
-                            borderRadius: '8px', color: '#b91c1c', fontSize: '0.82rem', fontWeight: 600,
-                            cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.15s',
-                        }}
-                        onMouseOver={e => (e.currentTarget as HTMLButtonElement).style.background = '#fee2e2'}
-                        onMouseOut={e => (e.currentTarget as HTMLButtonElement).style.background = '#fff'}
+                        className="shrink-0 flex items-center gap-2 px-4 py-2 bg-white border border-red-300 rounded-lg text-red-700 text-[0.82rem] font-semibold cursor-pointer whitespace-nowrap transition-colors duration-150 hover:bg-red-100"
                     >
                         <RefreshCw size={14} />
                         Reset Progress
@@ -145,23 +112,16 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
 
                 {/* Prototype Note */}
-                <div style={{
-                    background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '14px',
-                    padding: '1.25rem 1.5rem',
-                    display: 'flex', alignItems: 'flex-start', gap: '1rem',
-                }}>
-                    <AlertCircle size={18} color="#64748b" style={{ flexShrink: 0, marginTop: '1px' }} />
+                <div className="bg-slate-50 border border-border rounded-[14px] px-6 py-5 flex items-start gap-4">
+                    <AlertCircle size={18} className="text-slate-500 shrink-0 mt-px" />
                     <div>
-                        <h4 style={{ fontWeight: 700, color: '#334155', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-                            Prototype Environment
-                        </h4>
-                        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        <h4 className="font-bold text-slate-700 text-sm mb-1">Prototype Environment</h4>
+                        <p className="text-[0.82rem] text-muted-foreground leading-relaxed">
                             Running without a backend. All changes persist only in this browser session via localStorage. Team activity stats shown here reflect local state only.
                         </p>
                     </div>
                 </div>
             </div>
-
-        </div>
+        </motion.div>
     );
 };

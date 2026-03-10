@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
 
 interface TimerBannerProps {
     roundId: string;
@@ -17,11 +17,8 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
 
     useEffect(() => {
         if (!progress || progress.status === 'submitted') return;
-
-        // If time is null, that means the round hasn't started yet.
         if (progress.timeRemainingMs === null) return;
 
-        // Sync local state with store if we get out of whack
         if (timeLeft === null || Math.abs(progress.timeRemainingMs - timeLeft) > 6000) {
             setTimeLeft(progress.timeRemainingMs);
         }
@@ -31,7 +28,6 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
                 if (prev === null) return null;
                 const nextTime = Math.max(0, prev - 1000);
 
-                // Write to store every 5 seconds to reduce state updates, or every second if critical
                 if (nextTime % 5000 === 0 || nextTime <= 5000) {
                     updateTimeRemaining(roundId, nextTime);
                 }
@@ -49,29 +45,36 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         return () => clearInterval(interval);
     }, [roundId, progress, submitRound, updateTimeRemaining, navigate, timeLeft]);
 
-    // Don't show the timer banner if the round is finished or if time hasn't been initialized
     if (progress?.status === 'submitted' || timeLeft === null) {
         return null;
     }
 
     const minutes = Math.floor(timeLeft / 60000);
     const seconds = Math.floor((timeLeft % 60000) / 1000);
-    const isWarning = timeLeft < 300000; // Under 5 minutes
-    const isCritical = timeLeft < 60000; // Under 1 minute
+    const isWarning = timeLeft < 300000;
+    const isCritical = timeLeft < 60000;
 
     return (
-        <div className={cn(
-            "fixed top-0 left-0 w-full z-50 py-2 border-b shadow-md transition-colors",
-            isCritical ? "bg-red-600 text-white border-red-700 font-bold" :
-                isWarning ? "bg-yellow-400 text-yellow-900 border-yellow-500 font-bold" :
-                    "bg-slate-800 text-white border-slate-900"
-        )}>
-            <div className="container flex items-center justify-center gap-2">
-                {isWarning ? <AlertTriangle size={18} /> : <Clock size={18} />}
-                <span className="text-sm tracking-wide">
-                    {isCritical ? "TIME CRITICAL: " : isWarning ? "WARNING: " : "TIME REMAINING: "}
+        <div className="container max-w-[720px] mt-4 mb-2">
+            <div
+                className={cn(
+                    "flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl border shadow-sm transition-colors duration-300",
+                    isCritical ? "bg-red-600 text-white border-red-700 font-bold" :
+                        isWarning ? "bg-yellow-400 text-yellow-900 border-yellow-500 font-bold" :
+                            "bg-slate-800 text-white border-slate-700"
+                )}
+            >
+                {isWarning ? <AlertTriangle size={15} className="shrink-0" /> : <Clock size={15} className="shrink-0" />}
+                <span className="text-[0.78rem] tracking-wide font-semibold">
+                    {isCritical ? "TIME CRITICAL" : isWarning ? "WARNING" : "TIME REMAINING"}
                 </span>
-                <span className="mono text-lg">
+                <span className="mx-0.5 opacity-30">|</span>
+                <span
+                    className={cn(
+                        "font-mono text-[0.9rem] font-bold tracking-wider",
+                        isCritical && "animate-pulse"
+                    )}
+                >
                     {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
                 </span>
             </div>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
-
-
 import { Target, Link as LinkIcon, Save, Edit3, X, Lock, Unlock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export const AdminRoundManager: React.FC = () => {
     const { rounds, updateRound } = useAppStore();
@@ -55,92 +55,69 @@ export const AdminRoundManager: React.FC = () => {
     if (!activeRound) return null;
     const isClosed = activeRound.status === 'closed';
 
-    const fieldStyle: React.CSSProperties = {
-        width: '100%', padding: '0.625rem 0.875rem',
-        border: '1.5px solid #e2e8f0', borderRadius: '10px',
-        fontSize: '0.875rem', fontFamily: 'var(--font-sans)',
-        color: '#0f172a', background: '#fff', outline: 'none',
-        transition: 'border-color 0.15s',
-        lineHeight: 1.5,
-    };
-
-    const labelStyle: React.CSSProperties = {
-        fontSize: '0.72rem', fontWeight: 700, color: '#64748b',
-        textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.375rem',
-    };
+    const inputClass = "w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm font-sans text-slate-900 bg-white outline-none transition-colors duration-150 leading-relaxed focus:border-slate-900";
+    const labelClass = "text-[0.72rem] font-bold text-slate-500 uppercase tracking-wider block mb-1.5";
 
     return (
-        <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="animate-fade-in">
-
+        <motion.div
+            className="max-w-[900px] mx-auto flex flex-col gap-6"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             {/* Page Header */}
-            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.375rem' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Target size={18} color="#2563eb" />
+            <div className="border-b border-border pb-5">
+                <div className="flex items-center gap-3 mb-1.5">
+                    <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center">
+                        <Target size={18} className="text-blue-600" />
                     </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>Round Management</h1>
+                    <h1 className="text-2xl font-extrabold text-slate-900">Round Management</h1>
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginLeft: '3rem' }}>
+                <p className="text-muted-foreground text-sm ml-12">
                     Control access, dataset links, and content for each investigation round.
                 </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+            <div className="flex gap-6 items-start">
 
                 {/* Sidebar */}
-                <div style={{ width: '220px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.25rem' }}>
-                        Select Round
-                    </p>
+                <div className="w-[220px] shrink-0 flex flex-col gap-2">
+                    <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Round</p>
                     {rounds.map(round => {
                         const isSelected = selectedRoundId === round.id;
                         return (
                             <button
                                 key={round.id}
                                 onClick={() => handleSelectRound(round.id)}
-                                style={{
-                                    width: '100%', textAlign: 'left', padding: '0.75rem 1rem',
-                                    borderRadius: '10px', border: isSelected ? '1.5px solid #2563eb' : '1px solid var(--border)',
-                                    background: isSelected ? '#eff6ff' : '#fff',
-                                    color: isSelected ? '#1d4ed8' : '#334155',
-                                    fontWeight: isSelected ? 700 : 500, fontSize: '0.875rem', cursor: 'pointer',
-                                    transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                }}
-                                onMouseOver={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-base)'; }}
-                                onMouseOut={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+                                className={cn(
+                                    'w-full text-left px-4 py-3 rounded-[10px] text-sm cursor-pointer transition-all duration-150 flex items-center justify-between',
+                                    isSelected
+                                        ? 'border-[1.5px] border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                                        : 'border border-border bg-white text-slate-700 font-medium hover:bg-slate-50'
+                                )}
                             >
-                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                                    {round.title}
-                                </span>
-                                {round.status === 'closed' && <Lock size={12} color="#94a3b8" style={{ flexShrink: 0, marginLeft: '0.5rem' }} />}
+                                <span className="truncate flex-1">{round.title}</span>
+                                {round.status === 'closed' && <Lock size={12} className="text-slate-400 shrink-0 ml-2" />}
                             </button>
                         );
                     })}
                 </div>
 
                 {/* Main */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="flex-1 flex flex-col gap-4">
 
                     {/* Status Toggle Header */}
-                    <div style={{
-                        background: '#0f172a', borderRadius: '14px', padding: '1.25rem 1.5rem',
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    }}>
+                    <div className="bg-slate-800 border border-slate-700 rounded-[14px] px-6 py-5 flex items-center justify-between">
                         <div>
-                            <p style={{ fontSize: '0.68rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '0.2rem' }}>
-                                Active Round
-                            </p>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{activeRound.title}</h2>
+                            <p className="text-[0.68rem] text-slate-300 uppercase tracking-widest font-semibold mb-1">Active Round</p>
+                            <h2 className="text-lg font-extrabold text-white">{activeRound.title}</h2>
                         </div>
                         <button
                             onClick={toggleRoundStatus}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.5rem 1rem', borderRadius: '10px',
-                                background: isClosed ? '#dc2626' : '#16a34a',
-                                border: 'none', color: '#fff', fontSize: '0.82rem', fontWeight: 700,
-                                cursor: 'pointer', transition: 'background 0.15s',
-                            }}
+                            className={cn(
+                                'flex items-center gap-2 px-4 py-2 rounded-[10px] border-none text-[0.82rem] font-bold text-white cursor-pointer transition-colors duration-150',
+                                isClosed ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                            )}
                         >
                             {isClosed ? <Lock size={14} /> : <Unlock size={14} />}
                             {isClosed ? 'Case Closed' : 'Case Open'}
@@ -148,78 +125,55 @@ export const AdminRoundManager: React.FC = () => {
                     </div>
 
                     {/* Round Content Editor */}
-                    <div style={{
-                        background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden',
-                    }}>
-                        <div style={{
-                            padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)',
-                            background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        }}>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>Round Content</p>
+                    <div className="bg-white border border-border rounded-[14px] overflow-hidden">
+                        <div className="px-5 py-3.5 border-b border-border bg-slate-50 flex items-center justify-between">
+                            <p className="text-[0.85rem] font-bold text-slate-900">Round Content</p>
                             {!isEditingContent ? (
-                                <button onClick={handleEditContentClick} style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.35rem 0.75rem',
-                                    background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '8px',
-                                    color: '#475569', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                                }}>
+                                <button onClick={handleEditContentClick} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-600 text-[0.78rem] font-semibold cursor-pointer hover:bg-slate-50">
                                     <Edit3 size={13} /> Edit
                                 </button>
                             ) : (
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <button onClick={() => setIsEditingContent(false)} style={{
-                                        padding: '0.35rem 0.75rem', background: '#fff', border: '1px solid var(--border-strong)',
-                                        borderRadius: '8px', color: '#64748b', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                    }}>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setIsEditingContent(false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-[0.78rem] font-semibold cursor-pointer">
                                         <X size={13} /> Cancel
                                     </button>
-                                    <button onClick={handleSaveContent} style={{
-                                        padding: '0.35rem 0.875rem', background: '#0f172a', border: 'none',
-                                        borderRadius: '8px', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                                        display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                    }}>
+                                    <button onClick={handleSaveContent} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 border-none rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer">
                                         <Save size={13} /> Save
                                     </button>
                                 </div>
                             )}
                         </div>
 
-                        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div className="p-5 flex flex-col gap-4">
                             {isEditingContent ? (
                                 <>
                                     <div>
-                                        <label style={labelStyle}>Title</label>
-                                        <input value={editTitle} onChange={e => setEditTitle(e.target.value)} style={fieldStyle}
-                                            onFocus={e => (e.target.style.borderColor = '#0f172a')}
-                                            onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                        <label className={labelClass}>Title</label>
+                                        <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className={inputClass} />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Objective</label>
-                                        <input value={editObjective} onChange={e => setEditObjective(e.target.value)} style={fieldStyle}
-                                            onFocus={e => (e.target.style.borderColor = '#0f172a')}
-                                            onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                        <label className={labelClass}>Objective</label>
+                                        <input value={editObjective} onChange={e => setEditObjective(e.target.value)} className={inputClass} />
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Case Brief</label>
+                                        <label className={labelClass}>Case Brief</label>
                                         <textarea value={editCaseBrief} onChange={e => setEditCaseBrief(e.target.value)}
-                                            style={{ ...fieldStyle, minHeight: '100px', resize: 'vertical' }}
-                                            onFocus={e => (e.target.style.borderColor = '#0f172a')}
-                                            onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                            className={cn(inputClass, 'min-h-[100px] resize-y')} />
                                     </div>
                                 </>
                             ) : (
                                 <>
                                     <div>
-                                        <p style={labelStyle}>Title</p>
-                                        <p style={{ fontSize: '0.9rem', color: '#0f172a', fontWeight: 600 }}>{activeRound.title}</p>
+                                        <p className={labelClass}>Title</p>
+                                        <p className="text-[0.9rem] text-slate-900 font-semibold">{activeRound.title}</p>
                                     </div>
                                     <div>
-                                        <p style={labelStyle}>Objective</p>
-                                        <p style={{ fontSize: '0.875rem', color: 'var(--text-body)' }}>{activeRound.objective}</p>
+                                        <p className={labelClass}>Objective</p>
+                                        <p className="text-sm text-slate-700">{activeRound.objective}</p>
                                     </div>
                                     <div>
-                                        <p style={labelStyle}>Case Brief</p>
-                                        <p style={{ fontSize: '0.875rem', color: 'var(--text-body)', lineHeight: 1.65 }}>{activeRound.caseBrief}</p>
+                                        <p className={labelClass}>Case Brief</p>
+                                        <p className="text-sm text-slate-700 leading-relaxed">{activeRound.caseBrief}</p>
                                     </div>
                                 </>
                             )}
@@ -227,55 +181,36 @@ export const AdminRoundManager: React.FC = () => {
                     </div>
 
                     {/* Dataset Link */}
-                    <div style={{
-                        background: '#fff', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden',
-                    }}>
-                        <div style={{
-                            padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)',
-                            background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <LinkIcon size={15} color="#7c3aed" />
-                                <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a' }}>Dataset Link</p>
+                    <div className="bg-white border border-border rounded-[14px] overflow-hidden">
+                        <div className="px-5 py-3.5 border-b border-border bg-slate-50 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <LinkIcon size={15} className="text-violet-600" />
+                                <p className="text-[0.85rem] font-bold text-slate-900">Dataset Link</p>
                             </div>
                             {!isEditingLink && (
-                                <button onClick={handleEditLinkClick} style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.35rem 0.75rem',
-                                    background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '8px',
-                                    color: '#475569', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
-                                }}>
+                                <button onClick={handleEditLinkClick} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-600 text-[0.78rem] font-semibold cursor-pointer hover:bg-slate-50">
                                     <Edit3 size={13} /> Edit
                                 </button>
                             )}
                         </div>
 
-                        <div style={{ padding: '1.25rem' }}>
+                        <div className="p-5">
                             {isEditingLink ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div className="flex flex-col gap-3">
                                     <div>
-                                        <label style={labelStyle}>Download URL</label>
+                                        <label className={labelClass}>Download URL</label>
                                         <input
                                             value={datasetLink}
                                             onChange={e => setDatasetLink(e.target.value)}
                                             placeholder="https://example.com/dataset.csv"
-                                            style={{ ...fieldStyle, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}
-                                            onFocus={e => (e.target.style.borderColor = '#7c3aed')}
-                                            onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
+                                            className={cn(inputClass, 'font-mono text-[0.8rem]')}
                                         />
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                        <button onClick={() => setIsEditingLink(false)} style={{
-                                            padding: '0.4rem 0.875rem', background: '#fff', border: '1px solid var(--border-strong)',
-                                            borderRadius: '8px', color: '#64748b', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                        }}>
+                                    <div className="flex gap-2 justify-end">
+                                        <button onClick={() => setIsEditingLink(false)} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-[0.82rem] font-semibold cursor-pointer">
                                             <X size={13} /> Cancel
                                         </button>
-                                        <button onClick={handleSaveLink} style={{
-                                            padding: '0.4rem 1rem', background: '#7c3aed', border: 'none',
-                                            borderRadius: '8px', color: '#fff', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: '0.375rem',
-                                        }}>
+                                        <button onClick={handleSaveLink} className="flex items-center gap-1.5 px-4 py-1.5 bg-violet-600 border-none rounded-lg text-white text-[0.82rem] font-semibold cursor-pointer hover:bg-violet-700">
                                             <Save size={13} /> Save Link
                                         </button>
                                     </div>
@@ -284,21 +219,12 @@ export const AdminRoundManager: React.FC = () => {
                                 <a
                                     href={activeRound.datasetLink}
                                     target="_blank" rel="noopener noreferrer"
-                                    style={{
-                                        display: 'block', fontSize: '0.82rem', fontFamily: 'var(--font-mono)',
-                                        color: '#7c3aed', background: '#faf5ff', border: '1px solid #e9d5ff',
-                                        borderRadius: '10px', padding: '0.75rem 1rem',
-                                        wordBreak: 'break-all', textDecoration: 'none',
-                                    }}
+                                    className="block text-[0.82rem] font-mono text-violet-600 bg-violet-50 border border-violet-200 rounded-[10px] px-4 py-3 break-all no-underline hover:bg-violet-100 transition-colors"
                                 >
                                     {activeRound.datasetLink}
                                 </a>
                             ) : (
-                                <div style={{
-                                    textAlign: 'center', padding: '1.5rem', color: '#b45309',
-                                    background: '#fffbeb', border: '1px dashed #fde68a', borderRadius: '10px',
-                                    fontSize: '0.85rem', fontWeight: 600,
-                                }}>
+                                <div className="text-center p-6 text-amber-700 bg-amber-50 border border-dashed border-amber-200 rounded-[10px] text-[0.85rem] font-semibold">
                                     No dataset link configured yet
                                 </div>
                             )}
@@ -307,6 +233,6 @@ export const AdminRoundManager: React.FC = () => {
 
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };

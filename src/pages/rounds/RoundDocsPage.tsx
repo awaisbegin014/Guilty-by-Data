@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { FileText, ArrowLeft, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const RoundDocsPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -20,7 +21,7 @@ export const RoundDocsPage: React.FC = () => {
     }, [roundId, markDocsVisited, progress?.status]);
 
     if (!round) {
-        return <div className="container" style={{ padding: '2rem' }}>Case file not found.</div>;
+        return <div className="container p-8">Case file not found.</div>;
     }
 
     if (round.status === 'closed') {
@@ -34,82 +35,71 @@ export const RoundDocsPage: React.FC = () => {
     }
 
     return (
-        <div style={{ paddingTop: '1rem', paddingBottom: '3rem' }} className="animate-fade-in">
+        <motion.div
+            className="pt-4 pb-12"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             <TimerBanner roundId={round.id} />
 
-            <div className="container" style={{ maxWidth: '720px', marginTop: '1.5rem' }}>
+            <div className="container max-w-[720px] mt-6">
 
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-                        <div style={{
-                            width: '44px', height: '44px', borderRadius: '12px',
-                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'var(--text-muted)',
-                        }}>
+                <div className="flex items-start justify-between mb-7 gap-4">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
                             <FileText size={22} />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                            <h2 className="text-[1.4rem] font-extrabold text-slate-900 leading-tight">
                                 Investigation Docs
                             </h2>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                                {round.title}
-                            </p>
+                            <p className="text-[0.8rem] text-muted-foreground mt-0.5">{round.title}</p>
                         </div>
                     </div>
                     <Button variant="outline" onClick={() => navigate(`/round/${round.id}`)}>
-                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
+                        <ArrowLeft size={15} />
                         Back
                     </Button>
                 </div>
 
                 {/* Docs */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="flex flex-col gap-4 mb-6">
                     {round.documentation.map((doc, idx) => (
-                        <div key={idx} style={{
-                            background: '#fff', border: '1px solid var(--border)',
-                            borderRadius: '14px', overflow: 'hidden',
-                            boxShadow: 'var(--shadow-sm)',
-                        }}>
-                            <div style={{
-                                padding: '0.875rem 1.375rem',
-                                borderBottom: '1px solid var(--border)',
-                                background: 'var(--bg-base)',
-                            }}>
-                                <h3 style={{
-                                    fontSize: '0.85rem', fontWeight: 700, color: '#0f172a',
-                                    textTransform: 'uppercase', letterSpacing: '0.04em',
-                                }}>
+                        <motion.div
+                            key={idx}
+                            className="bg-white border border-border rounded-[14px] overflow-hidden shadow-sm"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: idx * 0.08 }}
+                        >
+                            <div className="px-5 py-3.5 border-b border-border bg-slate-50">
+                                <h3 className="text-[0.85rem] font-bold text-slate-900 uppercase tracking-wide">
                                     {doc.sectionTitle}
                                 </h3>
                             </div>
-                            <div style={{ padding: '1.25rem 1.375rem' }}>
-                                <p style={{
-                                    fontSize: '0.9rem', color: 'var(--text-body)', lineHeight: 1.75,
-                                    borderLeft: '3px solid var(--border-strong)', paddingLeft: '0.875rem',
-                                    fontStyle: 'italic',
-                                }}>
+                            <div className="p-5">
+                                <p className="text-[0.9rem] text-slate-700 leading-relaxed border-l-[3px] border-slate-300 pl-3.5 italic">
                                     {doc.content}
                                 </p>
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
 
                 {/* Action */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div className="flex justify-end">
                     <Button
                         variant="primary"
                         onClick={() => navigate(`/round/${round.id}/q/0`)}
                     >
                         Proceed to Interrogation
-                        <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />
+                        <ArrowRight size={16} />
                     </Button>
                 </div>
 
             </div>
-        </div>
+        </motion.div>
     );
 };

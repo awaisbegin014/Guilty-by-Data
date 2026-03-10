@@ -5,6 +5,8 @@ import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export const QuestionPage: React.FC = () => {
     const { roundId, questionIndex } = useParams<{ roundId: string; questionIndex: string }>();
@@ -17,7 +19,7 @@ export const QuestionPage: React.FC = () => {
     const qIndex = parseInt(questionIndex || '0', 10);
 
     if (!round || isNaN(qIndex) || qIndex < 0 || qIndex >= round.questions.length) {
-        return <div className="container" style={{ padding: '2rem' }}>Question not found.</div>;
+        return <div className="container p-8">Question not found.</div>;
     }
 
     if (round.status === 'closed') {
@@ -61,104 +63,85 @@ export const QuestionPage: React.FC = () => {
     const missingAnswers = round.questions.length - answeredCount;
 
     return (
-        <div style={{ paddingTop: '1rem', paddingBottom: '3rem', minHeight: '80vh' }} className="animate-fade-in">
+        <motion.div
+            className="pt-4 pb-12 min-h-[80vh]"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             <TimerBanner roundId={round.id} />
 
-            <div className="container" style={{ maxWidth: '680px', marginTop: '1.5rem' }}>
+            <div className="container max-w-[680px] mt-6">
 
                 {/* Progress Bar + Nav */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+                <div className="flex items-center justify-between mb-7">
                     <Button variant="outline" onClick={handlePrev} disabled={!isBidirectional && !isFirstQuestion}>
-                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
+                        <ArrowLeft size={15} />
                         {isFirstQuestion ? 'Case Brief' : 'Previous'}
                     </Button>
 
-                    <div style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+                    <div className="text-center">
+                        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
                             Interrogation Phase
                         </p>
-                        <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                        <div className="flex gap-[5px] justify-center">
                             {round.questions.map((_, idx) => {
                                 const isAnswered = !!progress?.answers?.[round.questions[idx].id];
                                 return (
-                                    <div key={idx} style={{
-                                        width: '28px', height: '5px', borderRadius: '99px',
-                                        background: idx === qIndex
-                                            ? '#0f172a'
-                                            : isAnswered ? '#64748b' : '#e2e8f0',
-                                        transition: 'background 0.2s',
-                                    }} />
+                                    <div key={idx} className={cn(
+                                        'w-7 h-[5px] rounded-full transition-colors duration-200',
+                                        idx === qIndex ? 'bg-slate-900' : isAnswered ? 'bg-slate-500' : 'bg-slate-200'
+                                    )} />
                                 );
                             })}
                         </div>
-                        <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginTop: '0.5rem', fontWeight: 500 }}>
+                        <p className="text-[0.72rem] text-slate-400 mt-2 font-medium">
                             {qIndex + 1} / {round.questions.length}
                         </p>
                     </div>
 
-                    <div style={{ width: '90px' }} />
+                    <div className="w-[90px]" />
                 </div>
 
                 {/* Question Card */}
-                <div style={{
-                    background: '#fff', border: '1px solid var(--border)',
-                    borderTop: '4px solid #0f172a',
-                    borderRadius: '16px', boxShadow: 'var(--shadow-md)',
-                    overflow: 'hidden', marginBottom: '1.5rem',
-                }}>
-                    <div style={{ padding: '1.75rem 2rem' }}>
-                        <h2 style={{
-                            fontSize: '1.1rem', fontWeight: 700, color: '#0f172a',
-                            lineHeight: 1.55, marginBottom: '1.5rem',
-                        }}>
+                <motion.div
+                    key={question.id}
+                    className="bg-white border border-border border-t-4 border-t-slate-900 rounded-2xl shadow-md overflow-hidden mb-6"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <div className="px-8 py-7">
+                        <h2 className="text-lg font-bold text-slate-900 leading-relaxed mb-6">
                             {question.text}
                         </h2>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                        <div className="flex flex-col gap-2.5">
                             {question.options.map((option, idx) => {
                                 const isSelected = selectedOptionId === option.id;
                                 return (
                                     <button
                                         key={option.id}
                                         onClick={() => handleOptionSelect(option.id)}
-                                        style={{
-                                            display: 'flex', alignItems: 'center', gap: '0.875rem',
-                                            textAlign: 'left', padding: '0.875rem 1rem',
-                                            borderRadius: '12px',
-                                            border: isSelected ? '2px solid #0f172a' : '2px solid #e2e8f0',
-                                            background: isSelected ? '#f8fafc' : '#fff',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease',
-                                            boxShadow: isSelected ? '0 0 0 1px #0f172a' : 'none',
-                                        }}
-                                        onMouseOver={e => {
-                                            if (!isSelected) {
-                                                (e.currentTarget as HTMLButtonElement).style.borderColor = '#94a3b8';
-                                                (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc';
-                                            }
-                                        }}
-                                        onMouseOut={e => {
-                                            if (!isSelected) {
-                                                (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
-                                                (e.currentTarget as HTMLButtonElement).style.background = '#fff';
-                                            }
-                                        }}
+                                        className={cn(
+                                            'flex items-center gap-3.5 text-left px-4 py-3.5 rounded-xl border-2 cursor-pointer transition-all duration-150',
+                                            isSelected
+                                                ? 'border-slate-900 bg-slate-50 shadow-[0_0_0_1px_#0f172a]'
+                                                : 'border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50'
+                                        )}
                                     >
-                                        <div style={{
-                                            width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            background: isSelected ? '#0f172a' : '#f1f5f9',
-                                            color: isSelected ? '#fff' : '#64748b',
-                                            fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 700,
-                                            transition: 'all 0.15s',
-                                        }}>
+                                        <div className={cn(
+                                            'w-7 h-7 rounded-lg shrink-0 flex items-center justify-center font-mono text-xs font-bold transition-all duration-150',
+                                            isSelected
+                                                ? 'bg-slate-900 text-white'
+                                                : 'bg-slate-100 text-slate-500'
+                                        )}>
                                             {isSelected ? <CheckCircle2 size={16} /> : String.fromCharCode(65 + idx)}
                                         </div>
-                                        <span style={{
-                                            fontSize: '0.9rem', flex: 1,
-                                            color: isSelected ? '#0f172a' : '#334155',
-                                            fontWeight: isSelected ? 600 : 400,
-                                        }}>
+                                        <span className={cn(
+                                            'text-[0.9rem] flex-1',
+                                            isSelected ? 'text-slate-900 font-semibold' : 'text-slate-700'
+                                        )}>
                                             {option.text}
                                         </span>
                                     </button>
@@ -166,65 +149,66 @@ export const QuestionPage: React.FC = () => {
                             })}
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Next Button */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div className="flex justify-end">
                     <Button variant="primary" onClick={handleNext}>
                         {isLastQuestion ? 'Review & Submit Findings' : 'Next Question'}
-                        {!isLastQuestion && <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />}
+                        {!isLastQuestion && <ArrowRight size={16} />}
                     </Button>
                 </div>
             </div>
 
             {/* Submit Modal */}
-            {showSubmitModal && (
-                <div style={{
-                    position: 'fixed', inset: 0, zIndex: 50,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'rgba(15,23,42,0.65)', padding: '1rem',
-                }} className="animate-fade-in">
-                    <div style={{
-                        background: '#fff', borderRadius: '18px', maxWidth: '440px', width: '100%',
-                        boxShadow: 'var(--shadow-xl)', overflow: 'hidden',
-                    }}>
-                        <div style={{ padding: '1.75rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <AlertTriangle size={22} color="#b45309" />
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Confirm Submission</h3>
-                            </div>
-
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.65, marginBottom: '1rem' }}>
-                                You're about to submit your findings for <strong style={{ color: '#0f172a' }}>{round.title}</strong>.
-                                Answers cannot be changed after submission.
-                            </p>
-
-                            {missingAnswers > 0 && (
-                                <div style={{
-                                    background: 'var(--warning-bg)', border: '1px solid var(--warning-border)',
-                                    borderRadius: '10px', padding: '0.75rem 1rem',
-                                    display: 'flex', gap: '0.625rem', alignItems: 'flex-start',
-                                    marginBottom: '1.25rem',
-                                }}>
-                                    <AlertTriangle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: '2px' }} />
-                                    <span style={{ fontSize: '0.82rem', color: '#b45309', fontWeight: 500 }}>
-                                        {missingAnswers} question{missingAnswers > 1 ? 's are' : ' is'} unanswered — these will be marked incorrect.
-                                    </span>
+            <AnimatePresence>
+                {showSubmitModal && (
+                    <motion.div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 p-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.div
+                            className="bg-white rounded-[18px] max-w-[440px] w-full shadow-xl overflow-hidden"
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <div className="p-7">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <AlertTriangle size={22} className="text-amber-700" />
+                                    <h3 className="text-lg font-extrabold text-slate-900">Confirm Submission</h3>
                                 </div>
-                            )}
 
-                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                                <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
-                                    Go Back
-                                </Button>
-                                <Button variant="primary" onClick={handleFinalSubmit}>
-                                    Finalize & Submit
-                                </Button>
+                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                                    You're about to submit your findings for <strong className="text-slate-900">{round.title}</strong>.
+                                    Answers cannot be changed after submission.
+                                </p>
+
+                                {missingAnswers > 0 && (
+                                    <div className="bg-warning-bg border border-warning-border rounded-[10px] px-4 py-3 flex gap-2.5 items-start mb-5">
+                                        <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                                        <span className="text-[0.82rem] text-amber-700 font-medium">
+                                            {missingAnswers} question{missingAnswers > 1 ? 's are' : ' is'} unanswered — these will be marked incorrect.
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-3 justify-end mt-2">
+                                    <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
+                                        Go Back
+                                    </Button>
+                                    <Button variant="primary" onClick={handleFinalSubmit}>
+                                        Finalize & Submit
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
     );
 };

@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { TimerBanner } from '../../components/TimerBanner';
 import { FileText, Database, ArrowRight, CheckCircle2, Circle, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const RoundOverviewPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -13,7 +14,6 @@ export const RoundOverviewPage: React.FC = () => {
 
     const round = rounds.find(r => r.id === roundId);
 
-    // Start the round timer — only fires when roundId changes (not on every store update)
     useEffect(() => {
         if (roundId && unlockedRounds.includes(roundId)) {
             startRound(roundId);
@@ -22,7 +22,7 @@ export const RoundOverviewPage: React.FC = () => {
     }, [roundId]);
 
     if (!round) {
-        return <div className="container" style={{ padding: '2rem' }}>Case file not found.</div>;
+        return <div className="container p-8">Case file not found.</div>;
     }
 
     if (round.status === 'closed') {
@@ -47,83 +47,73 @@ export const RoundOverviewPage: React.FC = () => {
     };
 
     const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
-        <div style={{
-            background: '#fff', border: '1px solid var(--border)',
-            borderRadius: '14px', overflow: 'hidden',
-            boxShadow: 'var(--shadow-sm)',
-        }}>
-            <div style={{
-                padding: '1rem 1.375rem', borderBottom: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', gap: '0.625rem',
-                background: 'var(--bg-base)',
-            }}>
-                <span style={{ color: 'var(--text-muted)' }}>{icon}</span>
-                <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0f172a' }}>{title}</h3>
+        <div className="bg-white border border-border rounded-[14px] overflow-hidden shadow-sm">
+            <div className="px-5 py-4 border-b border-border flex items-center gap-2.5 bg-slate-50">
+                <span className="text-muted-foreground">{icon}</span>
+                <h3 className="text-[0.9rem] font-bold text-slate-900">{title}</h3>
             </div>
-            <div style={{ padding: '1.375rem' }}>{children}</div>
+            <div className="p-5">{children}</div>
         </div>
     );
 
     return (
-        <div style={{ paddingTop: '1rem', paddingBottom: '3rem' }} className="animate-fade-in">
+        <motion.div
+            className="pt-4 pb-12"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             <TimerBanner roundId={round.id} />
 
-            <div className="container" style={{ maxWidth: '720px', marginTop: '1.5rem' }}>
+            <div className="container max-w-[720px] mt-6">
 
                 {/* Header */}
-                <div style={{ marginBottom: '1.75rem' }}>
-                    <Badge variant="info" style={{ marginBottom: '0.75rem' }}>Active Investigation</Badge>
-                    <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.375rem' }}>
+                <div className="mb-7">
+                    <Badge variant="info" className="mb-3">Active Investigation</Badge>
+                    <h2 className="text-[1.75rem] font-extrabold text-slate-900 mb-1.5">
                         {round.title}
                     </h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{round.objective}</p>
+                    <p className="text-muted-foreground text-[0.95rem]">{round.objective}</p>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="flex flex-col gap-4">
 
                     {/* Case Brief */}
                     <Section title="Case Brief" icon={<FileText size={18} />}>
-                        <p style={{ color: 'var(--text-body)', lineHeight: 1.75, fontSize: '0.9rem' }}>
+                        <p className="text-slate-700 leading-relaxed text-[0.9rem]">
                             {round.caseBrief}
                         </p>
                     </Section>
 
                     {/* Dataset */}
                     <Section title="Evidence Dataset" icon={<Database size={18} />}>
-                        <div style={{
-                            background: 'var(--bg-base)', border: '1px solid var(--border)',
-                            borderRadius: '10px', padding: '0.875rem 1rem', marginBottom: '1rem',
-                        }}>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem' }}>
+                        <div className="bg-slate-50 border border-border rounded-[10px] px-4 py-3.5 mb-4">
+                            <p className="text-[0.85rem] font-bold text-slate-900 mb-1">
                                 {round.datasetTitle}
                             </p>
-                            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            <p className="text-[0.82rem] text-muted-foreground">
                                 {round.datasetDescription}
                             </p>
                         </div>
                         <Button variant="outline" onClick={handleDatasetAccess}>
-                            <ExternalLink size={15} style={{ marginRight: '0.5rem' }} />
+                            <ExternalLink size={15} />
                             {round.datasetLink ? 'Open Dataset File' : 'Request Dataset Access'}
                         </Button>
                     </Section>
 
                     {/* Checklist */}
                     <Section title="Investigation Checklist" icon={<CheckCircle2 size={18} />}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div className="flex flex-col gap-3">
                             {[
                                 { label: 'Review Case Brief', done: true },
                                 { label: 'Open Evidence Dataset', done: !!progress?.datasetOpened },
                                 { label: 'Read Investigation Documentation', done: !!progress?.docsVisited },
                             ].map((item, i) => (
-                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <div key={i} className="flex items-center gap-3">
                                     {item.done
-                                        ? <CheckCircle2 size={18} color="#16a34a" />
-                                        : <Circle size={18} color="#cbd5e1" />}
-                                    <span style={{
-                                        fontSize: '0.875rem',
-                                        color: item.done ? '#0f172a' : 'var(--text-muted)',
-                                        fontWeight: item.done ? 500 : 400,
-                                    }}>
+                                        ? <CheckCircle2 size={18} className="text-green-600" />
+                                        : <Circle size={18} className="text-slate-300" />}
+                                    <span className={`text-sm ${item.done ? 'text-slate-900 font-medium' : 'text-muted-foreground'}`}>
                                         {item.label}
                                     </span>
                                 </div>
@@ -132,27 +122,27 @@ export const RoundOverviewPage: React.FC = () => {
                     </Section>
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', gap: '0.875rem', paddingTop: '0.5rem' }}>
+                    <div className="flex gap-3.5 pt-2">
                         <Button
                             variant="outline"
-                            style={{ flex: 1 }}
+                            className="flex-1"
                             onClick={() => navigate(`/round/${round.id}/docs`)}
                         >
-                            <FileText size={16} style={{ marginRight: '0.5rem' }} />
+                            <FileText size={16} />
                             View Documentation
                         </Button>
                         <Button
                             variant="primary"
-                            style={{ flex: 1 }}
+                            className="flex-1"
                             onClick={() => navigate(`/round/${round.id}/q/0`)}
                         >
                             Start Interrogation
-                            <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />
+                            <ArrowRight size={16} />
                         </Button>
                     </div>
                 </div>
 
             </div>
-        </div>
+        </motion.div>
     );
 };

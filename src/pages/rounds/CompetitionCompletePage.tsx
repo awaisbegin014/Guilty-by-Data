@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Trophy, LayoutDashboard, Star } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
+import { motion } from 'framer-motion';
 
 export const CompetitionCompletePage: React.FC = () => {
     const navigate = useNavigate();
     const { team, rounds, roundsProgress } = useAppStore();
 
-    // Calculate real score from actual answers vs correct option IDs
     let totalCorrect = 0;
     let totalQuestions = 0;
 
@@ -28,127 +28,84 @@ export const CompetitionCompletePage: React.FC = () => {
     const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
     return (
-        <div style={{ paddingTop: '3rem', paddingBottom: '3rem' }} className="animate-fade-in">
-            <div className="container" style={{ maxWidth: '540px' }}>
-                <div style={{
-                    background: '#fff', borderRadius: '20px',
-                    overflow: 'hidden', boxShadow: 'var(--shadow-xl)',
-                    border: '1px solid var(--border)',
-                }}>
+        <motion.div
+            className="pt-12 pb-12"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+            <div className="container max-w-[540px]">
+                <div className="bg-white rounded-[20px] overflow-hidden shadow-xl border border-border">
 
                     {/* Dark header */}
-                    <div style={{
-                        background: '#0f172a', padding: '2.5rem 2rem',
-                        textAlign: 'center', position: 'relative', overflow: 'hidden',
-                    }}>
-                        {/* Subtle glow */}
-                        <div style={{
-                            position: 'absolute', inset: 0,
-                            background: 'radial-gradient(ellipse at 50% 120%, rgba(234,179,8,0.08) 0%, transparent 60%)',
-                            pointerEvents: 'none',
-                        }} />
+                    <div className="bg-slate-900 px-8 py-10 text-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_120%,rgba(234,179,8,0.08)_0%,transparent_60%)] pointer-events-none" />
 
-                        <div style={{
-                            position: 'relative',
-                            width: '72px', height: '72px', borderRadius: '50%',
-                            background: '#fef9c3', border: '4px solid #fbbf24',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            margin: '0 auto 1.25rem',
-                            boxShadow: '0 0 0 8px rgba(251,191,36,0.12)',
-                        }}>
-                            <Trophy size={34} color="#b45309" />
-                        </div>
-                        <h1 style={{
-                            position: 'relative',
-                            fontSize: '1.75rem', fontWeight: 900, color: '#f8fafc',
-                            letterSpacing: '-0.02em', textTransform: 'uppercase',
-                            marginBottom: '0.375rem',
-                        }}>
+                        <motion.div
+                            className="relative w-[72px] h-[72px] rounded-full bg-yellow-100 border-4 border-amber-400 flex items-center justify-center mx-auto mb-5 shadow-[0_0_0_8px_rgba(251,191,36,0.12)]"
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                        >
+                            <Trophy size={34} className="text-amber-700" />
+                        </motion.div>
+                        <h1 className="relative text-[1.75rem] font-black text-slate-50 tracking-tight uppercase mb-1.5">
                             Mission Accomplished
                         </h1>
-                        <p style={{ position: 'relative', color: '#64748b', fontSize: '0.875rem' }}>
+                        <p className="relative text-slate-500 text-sm">
                             All corporate crises investigated
                         </p>
                     </div>
 
                     {/* Body */}
-                    <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="p-8 flex flex-col gap-6">
 
-                        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.7 }}>
-                            Outstanding work, <strong style={{ color: '#0f172a' }}>{team?.name || 'Investigator'}</strong>.
+                        <p className="text-center text-muted-foreground text-[0.9rem] leading-relaxed">
+                            Outstanding work, <strong className="text-slate-900">{team?.name || 'Investigator'}</strong>.
                             Your team has reviewed all evidence datasets and submitted strategic findings to the leadership board.
                         </p>
 
                         {/* Stats Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                        <div className="grid grid-cols-3 gap-3">
                             {[
-                                {
-                                    label: 'Total Score',
-                                    value: totalPoints.toString(),
-                                    sub: 'points',
-                                    color: '#0f172a',
-                                    bg: '#f8fafc',
-                                    border: '#e2e8f0',
-                                },
-                                {
-                                    label: 'Correct',
-                                    value: `${totalCorrect}/${totalQuestions}`,
-                                    sub: 'answers',
-                                    color: '#16a34a',
-                                    bg: '#f0fdf4',
-                                    border: '#bbf7d0',
-                                },
-                                {
-                                    label: 'Accuracy',
-                                    value: `${accuracy}%`,
-                                    sub: 'rate',
-                                    color: '#1d4ed8',
-                                    bg: '#eff6ff',
-                                    border: '#bfdbfe',
-                                },
+                                { label: 'Total Score', value: totalPoints.toString(), sub: 'points', color: 'text-slate-900', bg: 'bg-slate-50', border: 'border-slate-200' },
+                                { label: 'Correct', value: `${totalCorrect}/${totalQuestions}`, sub: 'answers', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+                                { label: 'Accuracy', value: `${accuracy}%`, sub: 'rate', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
                             ].map((stat, i) => (
-                                <div key={i} style={{
-                                    background: stat.bg, border: `1px solid ${stat.border}`,
-                                    borderRadius: '12px', padding: '1rem 0.875rem', textAlign: 'center',
-                                }}>
-                                    <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.375rem' }}>
-                                        {stat.label}
-                                    </p>
-                                    <p style={{ fontSize: '1.5rem', fontWeight: 900, color: stat.color, lineHeight: 1 }}>
-                                        {stat.value}
-                                    </p>
-                                    <p style={{ fontSize: '0.7rem', color: 'var(--text-subtle)', marginTop: '0.2rem' }}>
-                                        {stat.sub}
-                                    </p>
-                                </div>
+                                <motion.div
+                                    key={i}
+                                    className={`${stat.bg} border ${stat.border} rounded-xl px-3.5 py-4 text-center`}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.3 + i * 0.1 }}
+                                >
+                                    <p className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{stat.label}</p>
+                                    <p className={`text-2xl font-black ${stat.color} leading-none`}>{stat.value}</p>
+                                    <p className="text-[0.7rem] text-slate-400 mt-0.5">{stat.sub}</p>
+                                </motion.div>
                             ))}
                         </div>
 
                         {/* Rounds completed badge */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                            padding: '0.625rem 1rem', background: 'var(--bg-base)',
-                            border: '1px solid var(--border)', borderRadius: '10px',
-                            fontSize: '0.82rem', color: 'var(--text-muted)',
-                        }}>
-                            <Star size={13} color="#64748b" />
+                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 border border-border rounded-[10px] text-[0.82rem] text-muted-foreground">
+                            <Star size={13} className="text-slate-500" />
                             <span>{roundsCompleted} of {rounds.length} investigation rounds completed</span>
                         </div>
 
                         {/* Actions */}
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <Button variant="outline" onClick={() => navigate('/dashboard')} style={{ flex: 1 }}>
-                                <LayoutDashboard size={16} style={{ marginRight: '0.5rem' }} />
+                        <div className="flex gap-3">
+                            <Button variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
+                                <LayoutDashboard size={16} />
                                 Home
                             </Button>
-                            <Button variant="primary" onClick={() => navigate('/leaderboard')} style={{ flex: 1 }}>
+                            <Button variant="primary" onClick={() => navigate('/leaderboard')} className="flex-1">
                                 Rankings
-                                <Trophy size={16} style={{ marginLeft: '0.5rem' }} />
+                                <Trophy size={16} />
                             </Button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };

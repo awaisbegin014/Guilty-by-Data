@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
 import { LayoutDashboard, Target, HelpCircle, LogOut, ShieldCheck } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { cn } from '@/lib/utils';
 
 export const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
@@ -21,35 +21,25 @@ export const AdminLayout: React.FC = () => {
     ];
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f8fafc' }}>
+        <div className="flex flex-col min-h-screen bg-slate-50">
 
             {/* ── Header ── */}
-            <header style={{
-                background: '#0f172a',
-                borderBottom: '1px solid rgba(255,255,255,0.06)',
-                position: 'sticky', top: 0, zIndex: 40,
-                height: '60px',
-            }}>
-                <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '2rem' }}>
+            <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
+                <div className="container h-14 flex items-center justify-between gap-8">
 
                     {/* Brand */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
-                        <ShieldCheck size={18} color="#94a3b8" />
-                        <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.01em' }}>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <ShieldCheck size={17} className="text-slate-300" />
+                        <span className="text-[0.85rem] font-bold tracking-tight text-white">
                             GBD Admin
                         </span>
-                        <span style={{
-                            fontSize: '0.65rem', fontWeight: 600, color: '#475569',
-                            background: '#1e293b', border: '1px solid #334155',
-                            borderRadius: '4px', padding: '0.1rem 0.4rem',
-                            textTransform: 'uppercase', letterSpacing: '0.05em',
-                        }}>
+                        <span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-[1px] text-[0.6rem] font-semibold uppercase tracking-wider text-slate-300">
                             Control
                         </span>
                     </div>
 
                     {/* Nav */}
-                    <nav style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flex: 1, justifyContent: 'center' }}>
+                    <nav className="flex items-center gap-1 flex-1 justify-center">
                         {navItems.map((item) => {
                             const isActive = location.pathname.startsWith(item.path);
                             return (
@@ -57,12 +47,13 @@ export const AdminLayout: React.FC = () => {
                                     key={item.path}
                                     to={item.path}
                                     className={cn(
-                                        'admin-nav-link',
-                                        isActive && 'admin-nav-link--active'
+                                        'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[0.82rem] font-semibold no-underline transition-colors duration-150',
+                                        isActive
+                                            ? 'bg-slate-700 text-white'
+                                            : 'text-white hover:text-white hover:bg-slate-800'
                                     )}
-                                    style={{ textDecoration: 'none' }}
                                 >
-                                    {item.icon}
+                                    {React.cloneElement(item.icon, { size: 16 })}
                                     <span>{item.label}</span>
                                 </Link>
                             );
@@ -72,26 +63,25 @@ export const AdminLayout: React.FC = () => {
                     {/* Sign out */}
                     <button
                         onClick={handleLogout}
-                        className="admin-signout-btn"
-                        style={{ flexShrink: 0 }}
+                        className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 bg-transparent px-3 py-1.5 text-[0.78rem] font-semibold text-slate-200 transition-colors duration-150 hover:border-slate-500 hover:bg-slate-800 hover:text-white"
                     >
-                        <LogOut size={14} />
+                        <LogOut size={13} />
                         Sign Out
                     </button>
                 </div>
             </header>
 
             {/* ── Main content ── */}
-            <main style={{ flex: 1, padding: '2rem 0 3rem' }}>
+            <main className="flex-1 py-8 pb-12">
                 <div className="container">
                     <Outlet />
                 </div>
             </main>
 
             {/* ── Footer ── */}
-            <footer style={{ borderTop: '1px solid var(--border)', background: '#fff', padding: '1rem 0' }}>
-                <div className="container" style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+            <footer className="border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-50 py-4">
+                <div className="container text-center">
+                    <p className="text-[0.72rem] text-slate-400 font-medium">
                         © {new Date().getFullYear()} Guilty by Data · Admin Panel · Authorized Access Only
                     </p>
                 </div>

@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { competitionConfig } from '../../config/competitionConfig';
 import { RoundCard } from '../../components/RoundCard';
 import { Target, CheckCircle, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const DashboardPage: React.FC = () => {
     const { unlockedRounds, roundsProgress, rounds, team } = useAppStore();
@@ -23,58 +24,40 @@ export const DashboardPage: React.FC = () => {
     };
 
     return (
-        <div style={{ paddingTop: '2rem', paddingBottom: '3rem' }} className="animate-fade-in">
+        <motion.div
+            className="pt-8 pb-12"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             <div className="container">
 
                 {/* Story Banner */}
-                <div style={{
-                    background: '#0f172a',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    marginBottom: '2rem',
-                    position: 'relative',
-                }}>
-                    {/* Subtle top accent line */}
-                    <div style={{ height: '3px', background: 'linear-gradient(90deg, #dc2626, #7f1d1d)' }} />
+                <div className="bg-slate-900 rounded-2xl overflow-hidden mb-8 relative">
+                    <div className="h-[3px] bg-gradient-to-r from-red-600 to-red-900" />
 
-                    <div style={{ padding: '2.5rem', position: 'relative' }}>
-                        {/* Subtle background detail */}
-                        <div style={{
-                            position: 'absolute', right: 0, top: 0, bottom: 0, width: '40%',
-                            background: 'radial-gradient(ellipse at right center, rgba(220,38,38,0.05) 0%, transparent 70%)',
-                            pointerEvents: 'none',
-                        }} />
+                    <div className="p-10 relative">
+                        <div className="absolute right-0 top-0 bottom-0 w-[40%] bg-[radial-gradient(ellipse_at_right_center,rgba(220,38,38,0.05)_0%,transparent_70%)] pointer-events-none" />
 
-                        <div style={{ position: 'relative' }}>
-                            <span style={{
-                                fontFamily: 'var(--font-mono)', fontSize: '0.7rem', fontWeight: 600,
-                                color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.1em',
-                                display: 'block', marginBottom: '0.625rem',
-                            }}>
+                        <div className="relative">
+                            <span className="font-mono text-[0.7rem] font-semibold text-red-600 uppercase tracking-[0.1em] block mb-2.5">
                                 Case File #7492-Omega
                             </span>
-                            <h1 style={{
-                                fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
-                                fontWeight: 800, color: '#f8fafc', marginBottom: '1.25rem',
-                                letterSpacing: '-0.02em', lineHeight: 1.1,
-                            }}>
+                            <h1 className="font-mono text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold text-slate-50 mb-5 tracking-tight leading-none">
                                 The Ashworth Affair
                             </h1>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', maxWidth: '640px' }}>
-                                <p style={{
-                                    color: '#f1f5f9', fontSize: '0.975rem', fontWeight: 500,
-                                    borderLeft: '2px solid #dc2626', paddingLeft: '0.875rem', lineHeight: 1.7,
-                                }}>
-                                    CEO Richard Ashworth has been found dead under suspicious circumstances.
+                            <div className="flex flex-col gap-3.5 max-w-[640px]">
+                                <p className="text-slate-100 text-[0.975rem] font-medium border-l-2 border-red-600 pl-3.5 leading-relaxed">
+                                    CEO <span className="text-white font-semibold">Richard Ashworth</span> has been found dead under suspicious circumstances.
                                     The physical evidence has vanished — but the digital trail remains intact.
                                 </p>
-                                <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.75 }}>
+                                <p className="text-slate-400 text-sm leading-relaxed">
                                     Ashworth Dynamics, a mid-sized analytics firm, has been rocked by a series of
                                     internal crises. Insider trading allegations, a falsified revenue report, and now
                                     this. The board needs answers fast. Three datasets have been recovered from
                                     the encrypted company servers.
                                 </p>
-                                <p style={{ color: '#94a3b8', fontSize: '0.875rem', lineHeight: 1.75 }}>
+                                <p className="text-slate-400 text-sm leading-relaxed">
                                     Your mission: analyze the evidence across three investigation rounds,
                                     identify the suspect, uncover the hidden motive, and crack the encrypted alibis.
                                     Every minute counts, {team?.name || 'Investigator'}.
@@ -84,19 +67,15 @@ export const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'start' }}>
+                <div className="grid grid-cols-[1fr_auto] gap-8 items-start">
 
                     {/* Round Cards */}
                     <div>
-                        <h2 style={{
-                            fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)',
-                            textTransform: 'uppercase', letterSpacing: '0.07em',
-                            marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
-                        }}>
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                             <Target size={14} />
                             Investigation Rounds
                         </h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                        <div className="flex flex-col gap-3.5">
                             {rounds.map((round, index) => {
                                 const isUnlocked = unlockedRounds.includes(round.id);
                                 const progress = roundsProgress[round.id];
@@ -115,51 +94,42 @@ export const DashboardPage: React.FC = () => {
                     </div>
 
                     {/* Status Sidebar */}
-                    <div style={{ width: '200px' }}>
-                        <h2 style={{
-                            fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-subtle)',
-                            textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '1rem',
-                        }}>
+                    <motion.div
+                        className="w-[200px]"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4, delay: 0.2 }}
+                    >
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
                             Status
                         </h2>
-                        <div style={{
-                            background: '#fff', border: '1px solid var(--border)',
-                            borderRadius: '14px', overflow: 'hidden',
-                            boxShadow: 'var(--shadow-sm)',
-                        }}>
+                        <div className="bg-white border border-border rounded-[14px] overflow-hidden shadow-sm">
                             {[
-                                { label: 'Total Cases', value: competitionConfig.totalRounds, icon: <Target size={15} color="#64748b" />, color: '#64748b' },
-                                { label: 'Completed', value: completedRounds, icon: <CheckCircle size={15} color="#16a34a" />, color: '#16a34a' },
-                                { label: 'Remaining', value: remainingRounds, icon: <Clock size={15} color="#64748b" />, color: '#64748b' },
+                                { label: 'Total Cases', value: competitionConfig.totalRounds, icon: <Target size={15} className="text-slate-500" />, color: 'text-slate-500' },
+                                { label: 'Completed', value: completedRounds, icon: <CheckCircle size={15} className="text-green-600" />, color: 'text-green-600' },
+                                { label: 'Remaining', value: remainingRounds, icon: <Clock size={15} className="text-slate-500" />, color: 'text-slate-500' },
                             ].map((item, i) => (
-                                <div key={i} style={{
-                                    padding: '0.875rem 1.125rem',
-                                    borderBottom: i < 2 ? '1px solid var(--divider)' : 'none',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <div key={i} className={`px-[1.125rem] py-3.5 flex items-center justify-between ${i < 2 ? 'border-b border-muted' : ''}`}>
+                                    <div className="flex items-center gap-2">
                                         {item.icon}
-                                        <span style={{ fontSize: '0.82rem', color: 'var(--text-body)', fontWeight: 500 }}>{item.label}</span>
+                                        <span className="text-[0.82rem] text-slate-700 font-medium">{item.label}</span>
                                     </div>
-                                    <span style={{ fontSize: '1rem', fontWeight: 700, color: item.color }}>{item.value}</span>
+                                    <span className={`text-base font-bold ${item.color}`}>{item.value}</span>
                                 </div>
                             ))}
                         </div>
 
                         {inProgressRounds > 0 && (
-                            <div style={{
-                                marginTop: '0.75rem', padding: '0.75rem 1rem',
-                                background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
-                            }}>
-                                <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#b45309' }}>
+                            <div className="mt-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-[10px]">
+                                <p className="text-[0.78rem] font-semibold text-amber-700">
                                     ⏱ {inProgressRounds} round{inProgressRounds > 1 ? 's' : ''} in progress
                                 </p>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 </div>
 
             </div>
-        </div>
+        </motion.div>
     );
 };

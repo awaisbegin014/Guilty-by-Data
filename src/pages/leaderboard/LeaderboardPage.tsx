@@ -4,6 +4,8 @@ import { useAppStore } from '../../store/useAppStore';
 import { mockLeaderboard } from '../../data/mockData';
 import { Button } from '../../components/ui/Button';
 import { Trophy, ArrowLeft, Clock, Target } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export const LeaderboardPage: React.FC = () => {
     const { team } = useAppStore();
@@ -18,60 +20,53 @@ export const LeaderboardPage: React.FC = () => {
         return `${Math.floor(hours / 24)}d ago`;
     };
 
-    const medalStyle = (rank: number): React.CSSProperties => {
-        if (rank === 1) return { background: '#fef9c3', color: '#b45309', border: '2px solid #fbbf24' };
-        if (rank === 2) return { background: '#f1f5f9', color: '#475569', border: '2px solid #94a3b8' };
-        if (rank === 3) return { background: '#fff7ed', color: '#c2410c', border: '2px solid #fb923c' };
-        return { background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border)' };
+    const medalColors = (rank: number) => {
+        if (rank === 1) return 'bg-yellow-100 text-amber-700 border-2 border-amber-400';
+        if (rank === 2) return 'bg-slate-100 text-slate-600 border-2 border-slate-400';
+        if (rank === 3) return 'bg-orange-50 text-orange-700 border-2 border-orange-400';
+        return 'bg-muted text-muted-foreground border border-border';
     };
 
     return (
-        <div style={{ paddingTop: '2rem', paddingBottom: '3rem' }} className="animate-fade-in">
-            <div className="container" style={{ maxWidth: '800px' }}>
+        <motion.div
+            className="pt-8 pb-12"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
+            <div className="container max-w-[800px]">
 
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            width: '48px', height: '48px', borderRadius: '12px',
-                            background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                            <Trophy size={22} color="#fbbf24" />
+                <div className="flex items-end justify-between mb-7 gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center">
+                            <Trophy size={22} className="text-amber-400" />
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                            <h2 className="text-2xl font-extrabold text-slate-900 leading-tight">
                                 Global Leaderboard
                             </h2>
-                            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                            <p className="text-[0.82rem] text-muted-foreground mt-0.5">
                                 Top Investigators Ranking
                             </p>
                         </div>
                     </div>
 
                     <Button variant="outline" onClick={() => navigate('/dashboard')}>
-                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
+                        <ArrowLeft size={15} />
                         Dashboard
                     </Button>
                 </div>
 
                 {/* Table */}
-                <div style={{
-                    background: '#fff', border: '1px solid var(--border)',
-                    borderRadius: '16px', overflow: 'hidden',
-                    boxShadow: 'var(--shadow-sm)',
-                }}>
+                <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm">
                     {/* Table head */}
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: '64px 1fr 100px 90px 110px',
-                        background: 'var(--bg-base)', borderBottom: '1px solid var(--border)',
-                        padding: '0.75rem 1.25rem',
-                    }}>
+                    <div className="grid grid-cols-[64px_1fr_100px_90px_110px] bg-slate-50 border-b border-border px-5 py-3">
                         {['Rank', 'Team', 'Score', 'Solved', 'Last Active'].map((h, i) => (
-                            <div key={i} style={{
-                                fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-subtle)',
-                                textTransform: 'uppercase', letterSpacing: '0.06em',
-                                textAlign: i >= 2 ? 'center' : 'left',
-                            }}>
+                            <div key={i} className={cn(
+                                'text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider',
+                                i >= 2 && 'text-center'
+                            )}>
                                 {h}
                             </div>
                         ))}
@@ -80,101 +75,74 @@ export const LeaderboardPage: React.FC = () => {
                     {/* Rows */}
                     {mockLeaderboard.map((entry, index) => {
                         const isCurrentTeam = team?.id === entry.teamId || team?.name === entry.teamName;
-                        const medal = medalStyle(entry.rank);
 
                         return (
-                            <div
+                            <motion.div
                                 key={entry.teamId}
-                                className="animate-slide-up"
-                                style={{
-                                    display: 'grid', gridTemplateColumns: '64px 1fr 100px 90px 110px',
-                                    padding: '1rem 1.25rem', alignItems: 'center',
-                                    borderBottom: index < mockLeaderboard.length - 1 ? '1px solid var(--divider)' : 'none',
-                                    background: isCurrentTeam ? '#f0f7ff' : 'transparent',
-                                    animationDelay: `${index * 60}ms`,
-                                    animationFillMode: 'both',
-                                    transition: 'background 0.15s',
-                                }}
-                                onMouseOver={e => { if (!isCurrentTeam) (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-base)'; }}
-                                onMouseOut={e => { if (!isCurrentTeam) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: index * 0.06 }}
+                                className={cn(
+                                    'grid grid-cols-[64px_1fr_100px_90px_110px] px-5 py-4 items-center transition-colors duration-150',
+                                    index < mockLeaderboard.length - 1 && 'border-b border-muted',
+                                    isCurrentTeam ? 'bg-blue-50/70' : 'hover:bg-slate-50'
+                                )}
                             >
                                 {/* Rank */}
                                 <div>
-                                    <div style={{
-                                        width: '32px', height: '32px', borderRadius: '8px',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: '0.85rem', fontWeight: 800,
-                                        ...medal,
-                                    }}>
+                                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-[0.85rem] font-extrabold', medalColors(entry.rank))}>
                                         {entry.rank}
                                     </div>
                                 </div>
 
                                 {/* Team */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', minWidth: 0 }}>
-                                    <span style={{
-                                        fontSize: '0.9rem', fontWeight: 700,
-                                        color: entry.rank <= 3 ? '#0f172a' : '#334155',
-                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                    }}>
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <span className={cn(
+                                        'text-[0.9rem] font-bold truncate',
+                                        entry.rank <= 3 ? 'text-slate-900' : 'text-slate-700'
+                                    )}>
                                         {entry.teamName}
                                     </span>
                                     {isCurrentTeam && (
-                                        <span style={{
-                                            fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase',
-                                            letterSpacing: '0.05em', padding: '0.1rem 0.5rem',
-                                            background: '#1d4ed8', color: '#fff', borderRadius: '99px',
-                                            flexShrink: 0,
-                                        }}>
+                                        <span className="text-[0.65rem] font-bold uppercase tracking-wider px-2 py-0.5 bg-blue-600 text-white rounded-full shrink-0">
                                             You
                                         </span>
                                     )}
-                                    {entry.rank === 1 && <Trophy size={13} color="#fbbf24" style={{ flexShrink: 0 }} />}
+                                    {entry.rank === 1 && <Trophy size={13} className="text-amber-400 shrink-0" />}
                                 </div>
 
                                 {/* Score */}
-                                <div style={{ textAlign: 'center' }}>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
-                                        {entry.points}
-                                    </span>
+                                <div className="text-center">
+                                    <span className="text-lg font-extrabold text-slate-900">{entry.points}</span>
                                 </div>
 
                                 {/* Solved */}
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-                                        padding: '0.25rem 0.625rem', borderRadius: '8px',
-                                        background: 'var(--bg-base)', border: '1px solid var(--border)',
-                                        fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-body)',
-                                    }}>
-                                        <Target size={12} color="#64748b" />
+                                <div className="text-center">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-border text-[0.82rem] font-semibold text-slate-700">
+                                        <Target size={12} className="text-slate-500" />
                                         {entry.roundsCompleted}/3
                                     </div>
                                 </div>
 
                                 {/* Last Active */}
-                                <div style={{
-                                    textAlign: 'center', display: 'flex', alignItems: 'center',
-                                    justifyContent: 'flex-end', gap: '0.375rem',
-                                    fontSize: '0.78rem', color: 'var(--text-subtle)',
-                                }}>
+                                <div className="text-right flex items-center justify-end gap-1.5 text-[0.78rem] text-slate-400">
                                     <Clock size={12} />
                                     {formatTimeAgo(entry.latestSubmissionTime)}
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })}
                 </div>
 
                 {/* Mobile back btn */}
-                <div style={{ marginTop: '1.5rem' }}>
-                    <Button variant="outline" onClick={() => navigate('/dashboard')} style={{ width: '100%' }}>
-                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
+                <div className="mt-6">
+                    <Button variant="outline" onClick={() => navigate('/dashboard')} fullWidth>
+                        <ArrowLeft size={15} />
                         Back to Dashboard
                     </Button>
                 </div>
 
             </div>
-        </div>
+        </motion.div>
     );
 };
