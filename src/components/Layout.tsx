@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { UserCircle, Trophy, LogOut } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { Button } from './ui/Button';
 
 export const Layout: React.FC = () => {
     const { team, setTeam } = useAppStore();
@@ -17,65 +16,111 @@ export const Layout: React.FC = () => {
     const isLeaderboard = location.pathname === '/leaderboard';
 
     return (
-        <div className="flex flex-col" style={{ minHeight: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             {/* Header */}
-            <header className="bg-slate-900 text-white shadow-md z-10 sticky top-0">
-                <div className="container py-4 flex items-center justify-between">
+            <header style={{
+                background: '#0f172a',
+                borderBottom: '1px solid #1e293b',
+                position: 'sticky',
+                top: 0,
+                zIndex: 40,
+                height: '64px',
+            }}>
+                <div className="container" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {/* Brand */}
                     <div
-                        className="flex items-center gap-3 cursor-pointer"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: team ? 'pointer' : 'default' }}
                         onClick={() => team && navigate('/dashboard')}
                     >
-                        <div className="bg-slate-700 p-2 rounded-md">
-                            <span className="font-bold text-xl tracking-wider text-white mono">GbD</span>
+                        <div style={{
+                            width: '36px', height: '36px', borderRadius: '8px',
+                            background: '#1e293b', border: '1px solid #334155',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.8rem', color: '#e2e8f0', letterSpacing: '0.05em' }}>GbD</span>
                         </div>
                         <div>
-                            <h1 className="text-white text-lg font-bold m-0 leading-tight">Guilty by Data</h1>
-                            <p className="text-slate-400 text-xs m-0">Corporate Forensics</p>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc', lineHeight: 1.2 }}>Guilty by Data</div>
+                            <div style={{ fontSize: '0.7rem', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Corporate Forensics</div>
                         </div>
                     </div>
 
+                    {/* Nav Actions */}
                     {team && (
-                        <div className="flex items-center gap-6">
-                            <div className="flex items-center gap-2 text-slate-300">
-                                <UserCircle size={20} />
-                                <span className="font-medium text-sm hidden md:inline">{team.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+                                <UserCircle size={18} />
+                                <span style={{ fontWeight: 500, color: '#cbd5e1' }}>{team.name}</span>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <Button
-                                    variant="outline"
-                                    className="text-slate-300 border-slate-700 hover:bg-slate-800 hidden md:flex"
-                                    onClick={() => navigate(isLeaderboard ? '/dashboard' : '/leaderboard')}
-                                >
-                                    <Trophy size={16} className="mr-2" />
-                                    {isLeaderboard ? 'Dashboard' : 'Leaderboard'}
-                                </Button>
+                            <div style={{ width: '1px', height: '20px', background: '#1e293b' }} />
 
-                                <button
-                                    onClick={handleLogout}
-                                    className="text-slate-400 hover:text-white transition-colors flex items-center gap-1 text-sm"
-                                    title="Log out"
-                                >
-                                    <LogOut size={18} />
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => navigate(isLeaderboard ? '/dashboard' : '/leaderboard')}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.375rem',
+                                    padding: '0.375rem 0.75rem', borderRadius: '8px',
+                                    background: 'transparent', border: '1px solid #1e293b',
+                                    color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500,
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseOver={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.background = '#1e293b';
+                                    (e.currentTarget as HTMLButtonElement).style.color = '#e2e8f0';
+                                }}
+                                onMouseOut={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                                    (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8';
+                                }}
+                            >
+                                <Trophy size={14} />
+                                {isLeaderboard ? 'Dashboard' : 'Leaderboard'}
+                            </button>
+
+                            <button
+                                onClick={handleLogout}
+                                title="Log out"
+                                style={{
+                                    display: 'flex', alignItems: 'center',
+                                    padding: '0.375rem', borderRadius: '8px',
+                                    background: 'transparent', border: '1px solid transparent',
+                                    color: '#475569', cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseOver={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.color = '#ef4444';
+                                    (e.currentTarget as HTMLButtonElement).style.background = '#1e293b';
+                                }}
+                                onMouseOut={e => {
+                                    (e.currentTarget as HTMLButtonElement).style.color = '#475569';
+                                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                                }}
+                            >
+                                <LogOut size={16} />
+                            </button>
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* Main Content Area */}
-            <main className="flex-1">
+            {/* Main */}
+            <main style={{ flex: 1 }}>
                 <Outlet />
             </main>
 
             {/* Footer */}
-            <footer className="bg-slate-100 border-t border-slate-200 py-6 mt-12">
-                <div className="container text-center">
-                    <p className="text-sm text-slate-500">
-                        &copy; {new Date().getFullYear()} Guilty by Data Competition Platform. All rights reserved.
+            <footer style={{
+                borderTop: '1px solid var(--border)',
+                background: '#fff',
+                padding: '1.5rem 0',
+            }}>
+                <div className="container" style={{ textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
+                        © {new Date().getFullYear()} Guilty by Data — Competition Platform
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">Data Analytics Investigation Simulation</p>
+                    <p style={{ fontSize: '0.72rem', color: '#cbd5e1', marginTop: '0.25rem' }}>
+                        Data Analytics Investigation Simulation
+                    </p>
                 </div>
             </footer>
         </div>

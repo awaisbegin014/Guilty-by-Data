@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
-import { mockRounds } from '../../data/mockData';
 import { competitionConfig } from '../../config/competitionConfig';
-import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
-import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle, Circle } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export const QuestionPage: React.FC = () => {
-    const { roundId, questionIndex } = useParams<{ roundId: string, questionIndex: string }>();
+    const { roundId, questionIndex } = useParams<{ roundId: string; questionIndex: string }>();
     const navigate = useNavigate();
-    const { roundsProgress, setAnswer, submitRound } = useAppStore();
+    const { roundsProgress, setAnswer, submitRound, rounds } = useAppStore();
 
     const [showSubmitModal, setShowSubmitModal] = useState(false);
 
-    const round = mockRounds.find(r => r.id === roundId);
+    const round = rounds.find(r => r.id === roundId);
     const qIndex = parseInt(questionIndex || '0', 10);
 
     if (!round || isNaN(qIndex) || qIndex < 0 || qIndex >= round.questions.length) {
-        return <div className="container py-8">Question not found.</div>;
+        return <div className="container" style={{ padding: '2rem' }}>Question not found.</div>;
+    }
+
+    if (round.status === 'closed') {
+        navigate('/dashboard', { replace: true });
+        return null;
     }
 
     const progress = roundsProgress[round.id];
@@ -32,7 +34,6 @@ export const QuestionPage: React.FC = () => {
     const question = round.questions[qIndex];
     const selectedOptionId = progress?.answers?.[question.id];
     const isBidirectional = competitionConfig.questionNavigationMode === 'bidirectional';
-
     const isLastQuestion = qIndex === round.questions.length - 1;
     const isFirstQuestion = qIndex === 0;
 
@@ -41,19 +42,13 @@ export const QuestionPage: React.FC = () => {
     };
 
     const handleNext = () => {
-        if (isLastQuestion) {
-            setShowSubmitModal(true);
-        } else {
-            navigate(`/round/${round.id}/q/${qIndex + 1}`);
-        }
+        if (isLastQuestion) setShowSubmitModal(true);
+        else navigate(`/round/${round.id}/q/${qIndex + 1}`);
     };
 
     const handlePrev = () => {
-        if (!isFirstQuestion && isBidirectional) {
-            navigate(`/round/${round.id}/q/${qIndex - 1}`);
-        } else if (isFirstQuestion) {
-            navigate(`/round/${round.id}`);
-        }
+        if (!isFirstQuestion && isBidirectional) navigate(`/round/${round.id}/q/${qIndex - 1}`);
+        else if (isFirstQuestion) navigate(`/round/${round.id}`);
     };
 
     const handleFinalSubmit = () => {
@@ -66,118 +61,159 @@ export const QuestionPage: React.FC = () => {
     const missingAnswers = round.questions.length - answeredCount;
 
     return (
-        <div className="pt-8 pb-16 animate-fade-in relative min-h-[80vh]">
+        <div style={{ paddingTop: '1rem', paddingBottom: '3rem', minHeight: '80vh' }} className="animate-fade-in">
             <TimerBanner roundId={round.id} />
 
-            <div className="container mt-8 max-w-3xl">
+            <div className="container" style={{ maxWidth: '680px', marginTop: '1.5rem' }}>
 
-                {/* Header / Progress */}
-                <div className="flex items-center justify-between mb-8">
+                {/* Progress Bar + Nav */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
                     <Button variant="outline" onClick={handlePrev} disabled={!isBidirectional && !isFirstQuestion}>
-                        <ArrowLeft size={16} className="mr-2" />
+                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
                         {isFirstQuestion ? 'Case Brief' : 'Previous'}
                     </Button>
 
-                    <div className="text-center">
-                        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
                             Interrogation Phase
-                        </h2>
-                        <div className="flex items-center gap-1 justify-center">
-                            {round.questions.map((_, idx) => (
-                                <div
-                                    key={idx}
-                                    className={cn(
-                                        "w-8 h-1.5 rounded-full transition-colors",
-                                        idx === qIndex ? "bg-slate-800" :
-                                            idx < qIndex ? "bg-slate-400" : "bg-slate-200"
-                                    )}
-                                />
-                            ))}
+                        </p>
+                        <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                            {round.questions.map((_, idx) => {
+                                const isAnswered = !!progress?.answers?.[round.questions[idx].id];
+                                return (
+                                    <div key={idx} style={{
+                                        width: '28px', height: '5px', borderRadius: '99px',
+                                        background: idx === qIndex
+                                            ? '#0f172a'
+                                            : isAnswered ? '#64748b' : '#e2e8f0',
+                                        transition: 'background 0.2s',
+                                    }} />
+                                );
+                            })}
                         </div>
-                        <p className="text-xs text-slate-400 mt-2 font-medium">Question {qIndex + 1} of {round.questions.length}</p>
+                        <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', marginTop: '0.5rem', fontWeight: 500 }}>
+                            {qIndex + 1} / {round.questions.length}
+                        </p>
                     </div>
 
-                    <div className="w-[100px]" /> {/* Spacer for flex centering */}
+                    <div style={{ width: '90px' }} />
                 </div>
 
                 {/* Question Card */}
-                <Card className="border-t-4 border-t-slate-800 shadow-md">
-                    <CardBody className="p-6 md:p-8">
-                        <h2 className="text-xl md:text-2xl font-semibold text-slate-900 mb-8 leading-snug">
+                <div style={{
+                    background: '#fff', border: '1px solid var(--border)',
+                    borderTop: '4px solid #0f172a',
+                    borderRadius: '16px', boxShadow: 'var(--shadow-md)',
+                    overflow: 'hidden', marginBottom: '1.5rem',
+                }}>
+                    <div style={{ padding: '1.75rem 2rem' }}>
+                        <h2 style={{
+                            fontSize: '1.1rem', fontWeight: 700, color: '#0f172a',
+                            lineHeight: 1.55, marginBottom: '1.5rem',
+                        }}>
                             {question.text}
                         </h2>
 
-                        <div className="flex flex-col gap-3 pb-4">
-                            {question.options.map((option) => {
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                            {question.options.map((option, idx) => {
                                 const isSelected = selectedOptionId === option.id;
                                 return (
                                     <button
                                         key={option.id}
                                         onClick={() => handleOptionSelect(option.id)}
-                                        className={cn(
-                                            "flex items-center text-left p-4 rounded-xl border-2 transition-all",
-                                            isSelected
-                                                ? "border-slate-800 bg-slate-50 ring-1 ring-slate-800 shadow-sm"
-                                                : "border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50"
-                                        )}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '0.875rem',
+                                            textAlign: 'left', padding: '0.875rem 1rem',
+                                            borderRadius: '12px',
+                                            border: isSelected ? '2px solid #0f172a' : '2px solid #e2e8f0',
+                                            background: isSelected ? '#f8fafc' : '#fff',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            boxShadow: isSelected ? '0 0 0 1px #0f172a' : 'none',
+                                        }}
+                                        onMouseOver={e => {
+                                            if (!isSelected) {
+                                                (e.currentTarget as HTMLButtonElement).style.borderColor = '#94a3b8';
+                                                (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc';
+                                            }
+                                        }}
+                                        onMouseOut={e => {
+                                            if (!isSelected) {
+                                                (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
+                                                (e.currentTarget as HTMLButtonElement).style.background = '#fff';
+                                            }
+                                        }}
                                     >
-                                        <div className="mr-4 text-slate-400">
-                                            {isSelected ? (
-                                                <CheckCircle2 size={24} className="text-slate-800" />
-                                            ) : (
-                                                <Circle size={24} />
-                                            )}
+                                        <div style={{
+                                            width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            background: isSelected ? '#0f172a' : '#f1f5f9',
+                                            color: isSelected ? '#fff' : '#64748b',
+                                            fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 700,
+                                            transition: 'all 0.15s',
+                                        }}>
+                                            {isSelected ? <CheckCircle2 size={16} /> : String.fromCharCode(65 + idx)}
                                         </div>
-                                        <span className={cn(
-                                            "text-base md:text-lg flex-1",
-                                            isSelected ? "font-semibold text-slate-900" : "text-slate-700"
-                                        )}>
+                                        <span style={{
+                                            fontSize: '0.9rem', flex: 1,
+                                            color: isSelected ? '#0f172a' : '#334155',
+                                            fontWeight: isSelected ? 600 : 400,
+                                        }}>
                                             {option.text}
                                         </span>
                                     </button>
                                 );
                             })}
                         </div>
-                    </CardBody>
-                </Card>
-
-                {/* Next/Submit Button */}
-                <div className="mt-8 flex justify-end">
-                    <Button
-                        variant="primary"
-                        className="py-3 px-8 text-base shadow-sm"
-                        onClick={handleNext}
-                    >
-                        {isLastQuestion ? 'Review & Submit Findings' : 'Next Question'}
-                        {!isLastQuestion && <ArrowRight size={18} className="ml-2" />}
-                    </Button>
+                    </div>
                 </div>
 
+                {/* Next Button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button variant="primary" onClick={handleNext}>
+                        {isLastQuestion ? 'Review & Submit Findings' : 'Next Question'}
+                        {!isLastQuestion && <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />}
+                    </Button>
+                </div>
             </div>
 
-            {/* Confirmation Modal Overlay */}
+            {/* Submit Modal */}
             {showSubmitModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-fade-in">
-                    <Card className="w-full max-w-md shadow-lg border-0 ring-1 ring-slate-900/10">
-                        <div className="p-6">
-                            <div className="flex items-center gap-3 mb-4 text-slate-900">
-                                <AlertTriangle size={24} className="text-warning-text" />
-                                <h3 className="text-xl font-bold">Confirm Submission</h3>
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 50,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(15,23,42,0.65)', padding: '1rem',
+                }} className="animate-fade-in">
+                    <div style={{
+                        background: '#fff', borderRadius: '18px', maxWidth: '440px', width: '100%',
+                        boxShadow: 'var(--shadow-xl)', overflow: 'hidden',
+                    }}>
+                        <div style={{ padding: '1.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                <AlertTriangle size={22} color="#b45309" />
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>Confirm Submission</h3>
                             </div>
 
-                            <p className="text-slate-600 mb-4">
-                                You are about to submit your findings for <strong>{round.title}</strong>.
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.65, marginBottom: '1rem' }}>
+                                You're about to submit your findings for <strong style={{ color: '#0f172a' }}>{round.title}</strong>.
                                 Answers cannot be changed after submission.
                             </p>
 
                             {missingAnswers > 0 && (
-                                <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm font-medium mb-6 flex items-start gap-2 border border-red-200">
-                                    <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-                                    <span>You have {missingAnswers} unanswered question{missingAnswers > 1 ? 's' : ''}. Unanswered questions are marked incorrect.</span>
+                                <div style={{
+                                    background: 'var(--warning-bg)', border: '1px solid var(--warning-border)',
+                                    borderRadius: '10px', padding: '0.75rem 1rem',
+                                    display: 'flex', gap: '0.625rem', alignItems: 'flex-start',
+                                    marginBottom: '1.25rem',
+                                }}>
+                                    <AlertTriangle size={15} color="#b45309" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                    <span style={{ fontSize: '0.82rem', color: '#b45309', fontWeight: 500 }}>
+                                        {missingAnswers} question{missingAnswers > 1 ? 's are' : ' is'} unanswered — these will be marked incorrect.
+                                    </span>
                                 </div>
                             )}
 
-                            <div className="flex gap-3 justify-end mt-6">
+                            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
                                 <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
                                     Go Back
                                 </Button>
@@ -186,7 +222,7 @@ export const QuestionPage: React.FC = () => {
                                 </Button>
                             </div>
                         </div>
-                    </Card>
+                    </div>
                 </div>
             )}
         </div>

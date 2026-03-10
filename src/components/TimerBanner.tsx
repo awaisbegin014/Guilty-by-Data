@@ -13,21 +13,25 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     const progress = roundsProgress[roundId];
     const navigate = useNavigate();
 
-    // Local state for smoother re-renders
     const [timeLeft, setTimeLeft] = useState<number | null>(progress?.timeRemainingMs || null);
 
     useEffect(() => {
-        if (!progress || progress.status === 'submitted' || !progress.timeRemainingMs) return;
+        if (!progress || progress.status === 'submitted') return;
 
-        // Fast sync with global store initial
-        setTimeLeft(progress.timeRemainingMs);
+        // If time is null, that means the round hasn't started yet.
+        if (progress.timeRemainingMs === null) return;
+
+        // Sync local state with store if we get out of whack
+        if (timeLeft === null || Math.abs(progress.timeRemainingMs - timeLeft) > 6000) {
+            setTimeLeft(progress.timeRemainingMs);
+        }
 
         const interval = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev === null) return null;
                 const nextTime = Math.max(0, prev - 1000);
 
-                // Sync to store every 5 seconds to reduce writes, or when near end
+                // Write to store every 5 seconds to reduce state updates, or every second if critical
                 if (nextTime % 5000 === 0 || nextTime <= 5000) {
                     updateTimeRemaining(roundId, nextTime);
                 }
@@ -43,13 +47,10 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [roundId, progress?.status, progress?.timeRemainingMs, submitRound, updateTimeRemaining, navigate]);
+    }, [roundId, progress, submitRound, updateTimeRemaining, navigate, timeLeft]);
 
-    if (progress?.status === 'submitted') {
-        return null;
-    }
-
-    if (timeLeft === null) {
+    // Don't show the timer banner if the round is finished or if time hasn't been initialized
+    if (progress?.status === 'submitted' || timeLeft === null) {
         return null;
     }
 

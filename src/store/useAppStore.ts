@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Team, RoundProgress } from '../types';
+import type { Team, RoundProgress, Round } from '../types';
 import { mockRounds } from '../data/mockData';
 import { competitionConfig } from '../config/competitionConfig';
 
@@ -8,6 +8,12 @@ interface AppState {
     // Auth & Session
     team: Team | null;
     setTeam: (team: Team | null) => void;
+    isAdmin: boolean;
+    setAdmin: (isAdmin: boolean) => void;
+
+    // Competition Data (Source of Truth)
+    rounds: Round[];
+    updateRound: (roundId: string, updates: Partial<Round>) => void;
 
     // Progress & Game State
     unlockedRounds: string[];
@@ -21,8 +27,10 @@ interface AppState {
     markDocsVisited: (roundId: string) => void;
     markDatasetOpened: (roundId: string) => void;
     updateTimeRemaining: (roundId: string, timeMs: number) => void;
+    extendRoundTimer: (roundId: string, minutes: number) => void;
 
     // Util
+    resetParticipantProgress: () => void;
     resetState: () => void;
 }
 
@@ -31,6 +39,17 @@ export const useAppStore = create<AppState>()(
         (set, get) => ({
             team: null,
             setTeam: (team) => set({ team }),
+            isAdmin: false,
+            setAdmin: (isAdmin) => set({ isAdmin }),
+
+            rounds: mockRounds,
+            updateRound: (roundId, updates) => {
+                set((state) => ({
+                    rounds: state.rounds.map((r) =>
+                        r.id === roundId ? { ...r, ...updates } : r
+                    )
+                }));
+            },
 
             unlockedRounds: [mockRounds[0].id], // Round 1 is unlocked initially
             roundsProgress: {},
@@ -60,7 +79,7 @@ export const useAppStore = create<AppState>()(
                                 roundId,
                                 status: 'in_progress',
                                 timerStartedAt: Date.now(),
-                                timeRemainingMs: competitionConfig.timerMinutesPerRound * 60 * 1000,
+                                timeRemainingMs: existing?.timeRemainingMs ?? (competitionConfig.timerMinutesPerRound * 60 * 1000),
                                 answers: existing?.answers || {},
                                 submittedAt: null,
                                 docsVisited: existing?.docsVisited || false,
@@ -141,8 +160,10 @@ export const useAppStore = create<AppState>()(
 
             updateTimeRemaining: (roundId, timeMs) => {
                 set((state) => {
+                    if (timeMs < 0) return state;
                     const progress = state.roundsProgress[roundId];
-                    if (!progress || progress.status === 'submitted' || timeMs < 0) return state;
+                    if (!progress) return state;
+
                     return {
                         roundsProgress: {
                             ...state.roundsProgress,
@@ -152,10 +173,37 @@ export const useAppStore = create<AppState>()(
                 });
             },
 
+            extendRoundTimer: (roundId, minutes) => {
+                set((state) => {
+                    const progress = state.roundsProgress[roundId];
+                    if (!progress || progress.timeRemainingMs === null) return state;
+
+                    const addedMs = minutes * 60 * 1000;
+                    const newTime = Math.max(0, progress.timeRemainingMs + addedMs);
+
+                    return {
+                        roundsProgress: {
+                            ...state.roundsProgress,
+                            [roundId]: { ...progress, timeRemainingMs: newTime }
+                        }
+                    };
+                });
+            },
+
+            resetParticipantProgress: () => {
+                set((state) => ({
+                    roundsProgress: {},
+                    unlockedRounds: state.rounds.length > 0 ? [state.rounds[0].id] : []
+                }));
+            },
+
             resetState: () => {
                 set({
+                    team: null,
+                    isAdmin: false,
                     unlockedRounds: [mockRounds[0].id],
                     roundsProgress: {},
+                    rounds: mockRounds, // Reset rounds back to initial mock data
                 });
             }
         }),

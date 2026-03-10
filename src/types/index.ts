@@ -36,10 +36,12 @@ export interface Round {
   caseBrief: string;
   datasetTitle: string;
   datasetDescription: string;
+  datasetLink?: string;
   documentation: {
     sectionTitle: string;
     content: string;
   }[];
+  status?: 'open' | 'closed';
   questions: Question[];
 }
 

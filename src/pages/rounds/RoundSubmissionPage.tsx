@@ -1,113 +1,114 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
-import { mockRounds } from '../../data/mockData';
 import { competitionConfig } from '../../config/competitionConfig';
-import { Card, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { CheckCircle, Trophy, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { CheckCircle, Trophy, ArrowRight, LayoutDashboard, Clock } from 'lucide-react';
 
 export const RoundSubmissionPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
-    const { roundsProgress, unlockedRounds } = useAppStore();
+    const { roundsProgress, unlockedRounds, rounds } = useAppStore();
 
-    const round = mockRounds.find(r => r.id === roundId);
+    const round = rounds.find(r => r.id === roundId);
     const progress = round ? roundsProgress[round.id] : undefined;
 
     if (!round || progress?.status !== 'submitted') {
-        return <div className="container py-8">Submission data not found or round not completed.</div>;
+        return <div className="container" style={{ padding: '2rem' }}>Submission data not found.</div>;
     }
 
-    // Determine standard flows
-    const roundIndex = mockRounds.findIndex(r => r.id === round.id);
-    const isFinalRound = roundIndex === mockRounds.length - 1;
-    const isCompetitionComplete = isFinalRound && progress.status === 'submitted';
+    if (round.status === 'closed') {
+        navigate('/dashboard', { replace: true });
+        return null;
+    }
 
-    const hasNextUnlocked = !isFinalRound && unlockedRounds.includes(mockRounds[roundIndex + 1].id);
+    const roundIndex = rounds.findIndex(r => r.id === round.id);
+    const isFinalRound = roundIndex === rounds.length - 1;
+    const isCompetitionComplete = isFinalRound && progress.status === 'submitted';
+    const hasNextUnlocked = !isFinalRound && unlockedRounds.includes(rounds[roundIndex + 1].id);
+
+    const submittedTime = progress.submittedAt
+        ? new Date(progress.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : 'N/A';
 
     return (
-        <div className="container flex items-center justify-center min-h-[70vh] py-12 animate-fade-in">
-            <Card className="w-full max-w-2xl text-center shadow-lg border-t-8 border-t-slate-800">
-                <CardBody className="px-6 py-12 flex flex-col items-center">
+        <div style={{ paddingTop: '3rem', paddingBottom: '3rem' }} className="animate-fade-in">
+            <div className="container" style={{ maxWidth: '560px' }}>
+                <div style={{
+                    background: '#fff', border: '1px solid var(--border)',
+                    borderRadius: '20px', overflow: 'hidden',
+                    boxShadow: 'var(--shadow-lg)',
+                    textAlign: 'center',
+                }}>
+                    {/* Top accent */}
+                    <div style={{ height: '4px', background: 'linear-gradient(90deg, #16a34a, #15803d)' }} />
 
-                    <div className="bg-green-100 text-green-700 p-4 rounded-full mb-6 relative">
-                        <CheckCircle size={48} />
-                    </div>
-
-                    <Badge variant="success" className="mb-4">EVIDENCE SUBMITTED</Badge>
-
-                    <h2 className="text-3xl font-bold text-slate-900 mb-4">{round.title}</h2>
-
-                    <p className="text-lg text-slate-600 max-w-lg mb-8">
-                        Your findings have been recorded and securely transmitted to the executive committee.
-                        The case file is now locked.
-                    </p>
-
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 w-full max-w-md mb-10 flex justify-between items-center text-left">
-                        <div>
-                            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Time of Submission</p>
-                            <p className="text-sm font-medium text-slate-800">
-                                {progress.submittedAt ? new Date(progress.submittedAt).toLocaleTimeString() : 'N/A'}
-                            </p>
+                    <div style={{ padding: '2.5rem 2rem' }}>
+                        {/* Icon */}
+                        <div style={{
+                            width: '72px', height: '72px', borderRadius: '50%',
+                            background: '#f0fdf4', border: '1px solid #bbf7d0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            margin: '0 auto 1.25rem',
+                        }}>
+                            <CheckCircle size={36} color="#16a34a" />
                         </div>
-                        <div className="text-right">
-                            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Case Status</p>
-                            <p className="text-sm font-bold text-success-text">Resolved</p>
-                        </div>
-                    </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-                        {!isCompetitionComplete ? (
-                            <>
-                                <Button
-                                    variant="outline"
-                                    className="flex-1 py-3"
-                                    onClick={() => navigate('/dashboard')}
-                                >
-                                    <LayoutDashboard size={18} className="mr-2" />
-                                    Dashboard
+                        <Badge variant="success" style={{ marginBottom: '1rem' }}>Evidence Submitted</Badge>
+
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                            {round.title}
+                        </h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.65, maxWidth: '380px', margin: '0 auto 1.75rem' }}>
+                            Your findings have been recorded and transmitted to the executive committee. The case file is now locked.
+                        </p>
+
+                        {/* Timestamp */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                            padding: '0.75rem 1.25rem',
+                            background: 'var(--bg-base)', border: '1px solid var(--border)',
+                            borderRadius: '10px', marginBottom: '2rem',
+                            fontSize: '0.82rem', color: 'var(--text-muted)',
+                        }}>
+                            <Clock size={14} />
+                            Submitted at {submittedTime}
+                            <span style={{ margin: '0 0.5rem', color: 'var(--border-strong)' }}>·</span>
+                            <span style={{ color: '#16a34a', fontWeight: 600 }}>Case Resolved</span>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {!isCompetitionComplete ? (
+                                <>
+                                    <Button variant="outline" onClick={() => navigate('/dashboard')} style={{ width: '100%' }}>
+                                        <LayoutDashboard size={16} style={{ marginRight: '0.5rem' }} />
+                                        Back to Dashboard
+                                    </Button>
+
+                                    {competitionConfig.sequentialRoundUnlock && hasNextUnlocked ? (
+                                        <Button variant="primary" onClick={() => navigate(`/round/${rounds[roundIndex + 1].id}`)} style={{ width: '100%' }}>
+                                            Next Case
+                                            <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />
+                                        </Button>
+                                    ) : (
+                                        <Button variant="primary" onClick={() => navigate('/leaderboard')} style={{ width: '100%' }}>
+                                            View Rankings
+                                            <Trophy size={16} style={{ marginLeft: '0.5rem' }} />
+                                        </Button>
+                                    )}
+                                </>
+                            ) : (
+                                <Button variant="primary" onClick={() => navigate('/complete')} style={{ width: '100%', padding: '0.875rem' }}>
+                                    View Final Verdict
+                                    <Trophy size={18} style={{ marginLeft: '0.5rem' }} />
                                 </Button>
-
-                                {competitionConfig.sequentialRoundUnlock && hasNextUnlocked && (
-                                    <Button
-                                        variant="primary"
-                                        className="flex-1 py-3"
-                                        onClick={() => navigate(`/round/${mockRounds[roundIndex + 1].id}`)}
-                                    >
-                                        Next Case
-                                        <ArrowRight size={18} className="ml-2" />
-                                    </Button>
-                                )}
-
-                                {/* If purely open competition, just go to leaderboard or dashboard */}
-                                {(!competitionConfig.sequentialRoundUnlock || !hasNextUnlocked) && (
-                                    <Button
-                                        variant="primary"
-                                        className="flex-1 py-3"
-                                        onClick={() => navigate('/leaderboard')}
-                                    >
-                                        View Rankings
-                                        <Trophy size={18} className="ml-2" />
-                                    </Button>
-                                )}
-                            </>
-                        ) : (
-                            // Flow for handling the completion of the entire competition
-                            <Button
-                                variant="primary"
-                                className="w-full py-4 text-lg"
-                                onClick={() => navigate('/complete')}
-                            >
-                                View Final Verdict
-                                <Trophy size={20} className="ml-2" />
-                            </Button>
-                        )}
+                            )}
+                        </div>
                     </div>
-
-                </CardBody>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 };

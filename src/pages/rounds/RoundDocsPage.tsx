@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
-import { mockRounds } from '../../data/mockData';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { FileText, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -10,9 +8,9 @@ import { FileText, ArrowLeft, ArrowRight } from 'lucide-react';
 export const RoundDocsPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
-    const { markDocsVisited, roundsProgress } = useAppStore();
+    const { markDocsVisited, roundsProgress, rounds } = useAppStore();
 
-    const round = mockRounds.find(r => r.id === roundId);
+    const round = rounds.find(r => r.id === roundId);
     const progress = round ? roundsProgress[round.id] : undefined;
 
     useEffect(() => {
@@ -22,7 +20,12 @@ export const RoundDocsPage: React.FC = () => {
     }, [roundId, markDocsVisited, progress?.status]);
 
     if (!round) {
-        return <div className="container py-8">Case File not found.</div>;
+        return <div className="container" style={{ padding: '2rem' }}>Case file not found.</div>;
+    }
+
+    if (round.status === 'closed') {
+        navigate('/dashboard', { replace: true });
+        return null;
     }
 
     if (progress?.status === 'submitted') {
@@ -31,52 +34,79 @@ export const RoundDocsPage: React.FC = () => {
     }
 
     return (
-        <div className="pt-8 pb-16 animate-fade-in relative">
+        <div style={{ paddingTop: '1rem', paddingBottom: '3rem' }} className="animate-fade-in">
             <TimerBanner roundId={round.id} />
 
-            <div className="container mt-8 max-w-3xl">
+            <div className="container" style={{ maxWidth: '720px', marginTop: '1.5rem' }}>
+
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-slate-200 p-2 rounded-lg text-slate-700">
-                            <FileText size={24} />
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                        <div style={{
+                            width: '44px', height: '44px', borderRadius: '12px',
+                            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: 'var(--text-muted)',
+                        }}>
+                            <FileText size={22} />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900">Investigation Docs</h2>
-                            <p className="text-slate-500 text-sm">Case Reference File</p>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                                Investigation Docs
+                            </h2>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                {round.title}
+                            </p>
                         </div>
                     </div>
-
                     <Button variant="outline" onClick={() => navigate(`/round/${round.id}`)}>
-                        <ArrowLeft size={16} className="mr-2" />
-                        Back to Case Brief
+                        <ArrowLeft size={15} style={{ marginRight: '0.375rem' }} />
+                        Back
                     </Button>
                 </div>
 
-                <div className="flex flex-col gap-6">
+                {/* Docs */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                     {round.documentation.map((doc, idx) => (
-                        <Card key={idx}>
-                            <CardHeader>
-                                <h3 className="text-lg font-bold text-slate-800">{doc.sectionTitle}</h3>
-                            </CardHeader>
-                            <CardBody className="pt-2">
-                                <p className="text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-md border border-slate-100 italic">
-                                    "{doc.content}"
+                        <div key={idx} style={{
+                            background: '#fff', border: '1px solid var(--border)',
+                            borderRadius: '14px', overflow: 'hidden',
+                            boxShadow: 'var(--shadow-sm)',
+                        }}>
+                            <div style={{
+                                padding: '0.875rem 1.375rem',
+                                borderBottom: '1px solid var(--border)',
+                                background: 'var(--bg-base)',
+                            }}>
+                                <h3 style={{
+                                    fontSize: '0.85rem', fontWeight: 700, color: '#0f172a',
+                                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                                }}>
+                                    {doc.sectionTitle}
+                                </h3>
+                            </div>
+                            <div style={{ padding: '1.25rem 1.375rem' }}>
+                                <p style={{
+                                    fontSize: '0.9rem', color: 'var(--text-body)', lineHeight: 1.75,
+                                    borderLeft: '3px solid var(--border-strong)', paddingLeft: '0.875rem',
+                                    fontStyle: 'italic',
+                                }}>
+                                    {doc.content}
                                 </p>
-                            </CardBody>
-                        </Card>
+                            </div>
+                        </div>
                     ))}
+                </div>
 
-                    <div className="mt-4 flex justify-end">
-                        <Button
-                            variant="primary"
-                            className="py-3 px-8 text-base"
-                            onClick={() => navigate(`/round/${round.id}/q/0`)}
-                        >
-                            Proceed to Interrogation
-                            <ArrowRight size={18} className="ml-2" />
-                        </Button>
-                    </div>
+                {/* Action */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                        variant="primary"
+                        onClick={() => navigate(`/round/${round.id}/q/0`)}
+                    >
+                        Proceed to Interrogation
+                        <ArrowRight size={16} style={{ marginLeft: '0.5rem' }} />
+                    </Button>
                 </div>
 
             </div>
