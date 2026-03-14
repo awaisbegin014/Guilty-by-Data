@@ -4,8 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
-import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const QuestionPage: React.FC = () => {
@@ -19,7 +18,7 @@ export const QuestionPage: React.FC = () => {
     const qIndex = parseInt(questionIndex || '0', 10);
 
     if (!round || isNaN(qIndex) || qIndex < 0 || qIndex >= round.questions.length) {
-        return <div className="container p-8">Question not found.</div>;
+        return <div className="container p-20 text-center"><p className="case-label">Analysis Node Unavailable</p></div>;
     }
 
     if (round.status === 'closed') {
@@ -63,152 +62,166 @@ export const QuestionPage: React.FC = () => {
     const missingAnswers = round.questions.length - answeredCount;
 
     return (
-        <motion.div
-            className="pt-4 pb-12 min-h-[80vh]"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
+        <div className="pt-4 pb-12 min-h-full flex flex-col">
             <TimerBanner roundId={round.id} />
 
-            <div className="container max-w-[680px] mt-6">
+            <div className="container max-w-[800px] mt-4 flex-1 flex flex-col">
 
-                {/* Progress Bar + Nav */}
-                <div className="flex items-center justify-between mb-7">
-                    <Button variant="outline" onClick={handlePrev} disabled={!isBidirectional && !isFirstQuestion}>
-                        <ArrowLeft size={15} />
-                        {isFirstQuestion ? 'Case Brief' : 'Previous'}
+                {/* Question Terminal Header */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 pb-3 border-b border-border shrink-0">
+                    <Button variant="outline" size="sm" onClick={handlePrev} className="w-full sm:w-auto font-black text-[0.55rem] tracking-widest uppercase h-7 px-3">
+                        <ArrowLeft size={10} className="mr-1.5" />
+                        <span>{isFirstQuestion ? 'Case Brief' : 'Prev'}</span>
                     </Button>
 
-                    <div className="text-center">
-                        <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                            Interrogation Phase
-                        </p>
-                        <div className="flex gap-[5px] justify-center">
+                    <div className="flex flex-col items-center flex-1">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                             <Fingerprint size={12} className="text-primary" />
+                             <span className="case-label text-white/90 text-[0.55rem]">Findings Board</span>
+                        </div>
+                        <div className="flex gap-1 justify-center">
                             {round.questions.map((_, idx) => {
                                 const isAnswered = !!progress?.answers?.[round.questions[idx].id];
                                 return (
-                                    <div key={idx} className={cn(
-                                        'w-7 h-[5px] rounded-full transition-colors duration-200',
-                                        idx === qIndex ? 'bg-slate-900' : isAnswered ? 'bg-slate-500' : 'bg-slate-200'
-                                    )} />
+                                    <div 
+                                        key={idx} 
+                                        className={cn(
+                                            'w-6 h-1 transition-all duration-300',
+                                            idx === qIndex ? 'bg-primary' : (isAnswered ? 'bg-slate-400' : 'bg-secondary')
+                                        )} 
+                                    />
                                 );
                             })}
                         </div>
-                        <p className="text-[0.72rem] text-slate-400 mt-2 font-medium">
-                            {qIndex + 1} / {round.questions.length}
+                        <p className="text-[0.6rem] font-mono text-white/60 font-black mt-1.5 uppercase tracking-widest">
+                             Node {qIndex + 1} // {round.questions.length}
                         </p>
                     </div>
 
-                    <div className="w-[90px]" />
+                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 border border-primary/30 rounded bg-primary/10">
+                        <Database size={10} className="text-primary" />
+                        <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">P_0{round.id.at(-1)}</span>
+                    </div>
                 </div>
 
-                {/* Question Card */}
-                <motion.div
-                    key={question.id}
-                    className="bg-white border border-border border-t-4 border-t-slate-900 rounded-2xl shadow-md overflow-hidden mb-6"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <div className="px-8 py-7">
-                        <h2 className="text-lg font-bold text-slate-900 leading-relaxed mb-6">
+                {/* Main Question Dossier */}
+                <div className="dossier-card rounded-xl p-5 sm:p-6 mb-3 border-primary/20 bg-slate-900/60 flex-1 overflow-y-auto min-h-0">
+                    <div className="flex items-start gap-3 mb-4">
+                         <div className="w-8 h-8 rounded border border-border bg-slate-900/40 flex items-center justify-center text-primary font-mono font-black text-[0.65rem] shrink-0">
+                            P{qIndex + 1}
+                         </div>
+                         <h2 className="text-lg font-black text-white leading-tight mt-0.5 tracking-tight">
                             {question.text}
-                        </h2>
-
-                        <div className="flex flex-col gap-2.5">
-                            {question.options.map((option, idx) => {
-                                const isSelected = selectedOptionId === option.id;
-                                return (
-                                    <button
-                                        key={option.id}
-                                        onClick={() => handleOptionSelect(option.id)}
-                                        className={cn(
-                                            'flex items-center gap-3.5 text-left px-4 py-3.5 rounded-xl border-2 cursor-pointer transition-all duration-150',
-                                            isSelected
-                                                ? 'border-slate-900 bg-slate-50 shadow-[0_0_0_1px_#0f172a]'
-                                                : 'border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50'
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            'w-7 h-7 rounded-lg shrink-0 flex items-center justify-center font-mono text-xs font-bold transition-all duration-150',
-                                            isSelected
-                                                ? 'bg-slate-900 text-white'
-                                                : 'bg-slate-100 text-slate-500'
-                                        )}>
-                                            {isSelected ? <CheckCircle2 size={16} /> : String.fromCharCode(65 + idx)}
-                                        </div>
-                                        <span className={cn(
-                                            'text-[0.9rem] flex-1',
-                                            isSelected ? 'text-slate-900 font-semibold' : 'text-slate-700'
-                                        )}>
-                                            {option.text}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                         </h2>
                     </div>
-                </motion.div>
 
-                {/* Next Button */}
-                <div className="flex justify-end">
-                    <Button variant="primary" onClick={handleNext}>
-                        {isLastQuestion ? 'Review & Submit Findings' : 'Next Question'}
-                        {!isLastQuestion && <ArrowRight size={16} />}
+                    <div className="grid grid-cols-1 gap-2">
+                        {question.options.map((option, idx) => {
+                            const isSelected = selectedOptionId === option.id;
+                            const letter = String.fromCharCode(65 + idx);
+                            return (
+                                <button
+                                    key={option.id}
+                                    onClick={() => handleOptionSelect(option.id)}
+                                    className={cn(
+                                        'flex items-center gap-4 text-left px-5 py-3 rounded-lg border transition-all group relative overflow-hidden',
+                                        isSelected
+                                            ? 'bg-primary/10 border-primary shadow-[0_0_12px_rgba(74,124,157,0.1)]'
+                                            : 'bg-secondary/10 border-border/60 hover:border-primary/40 hover:bg-secondary/20'
+                                    )}
+                                >
+                                    <div className={cn(
+                                        'w-7 h-7 flex items-center justify-center font-mono font-black text-[0.65rem] transition-colors rounded border',
+                                        isSelected ? 'bg-primary text-white border-primary' : 'bg-slate-900 border-border text-muted-foreground group-hover:text-slate-200'
+                                    )}>
+                                        {isSelected ? <CheckCircle2 size={14} /> : letter}
+                                    </div>
+                                    <span className={cn(
+                                        'text-[0.85rem] flex-1 font-bold tracking-tight transition-colors',
+                                        isSelected ? 'text-white' : 'text-slate-300'
+                                    )}>
+                                        {option.text}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Navigation / Action Bar */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-slate-900/40 border border-border rounded-xl shrink-0">
+                    <div className="flex items-center gap-2.5">
+                         <Info size={14} className="text-primary shrink-0" />
+                         <p className="text-[0.55rem] text-muted-foreground font-black uppercase tracking-widest leading-tight">
+                            Protocol: findings are encrypted and auto-saved.
+                         </p>
+                    </div>
+                    <Button variant="primary" size="sm" onClick={handleNext} className="w-full sm:w-auto min-w-[180px] h-10 text-[0.7rem] tracking-widest uppercase">
+                        {isLastQuestion ? (
+                            <span className="flex items-center gap-2">
+                                <Fingerprint size={16} />
+                                <span>Validate Protocol</span>
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-2">
+                                <span>Proceed</span>
+                                <ArrowRight size={16} />
+                            </span>
+                        )}
                     </Button>
                 </div>
             </div>
 
-            {/* Submit Modal */}
-            <AnimatePresence>
-                {showSubmitModal && (
-                    <motion.div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/65 p-4"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <motion.div
-                            className="bg-white rounded-[18px] max-w-[440px] w-full shadow-xl overflow-hidden"
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                        >
-                            <div className="p-7">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <AlertTriangle size={22} className="text-amber-700" />
-                                    <h3 className="text-lg font-extrabold text-slate-900">Confirm Submission</h3>
+            {/* Submission Protocol Modal */}
+            {showSubmitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-background/80">
+                    <div className="dossier-card rounded-xl max-w-[480px] w-full shadow-2xl relative z-50 overflow-hidden">
+                        <div className="p-10">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-12 h-12 rounded border border-destructive/20 bg-destructive/10 flex items-center justify-center text-destructive">
+                                    <AlertTriangle size={24} />
                                 </div>
-
-                                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                                    You're about to submit your findings for <strong className="text-slate-900">{round.title}</strong>.
-                                    Answers cannot be changed after submission.
-                                </p>
-
-                                {missingAnswers > 0 && (
-                                    <div className="bg-warning-bg border border-warning-border rounded-[10px] px-4 py-3 flex gap-2.5 items-start mb-5">
-                                        <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
-                                        <span className="text-[0.82rem] text-amber-700 font-medium">
-                                            {missingAnswers} question{missingAnswers > 1 ? 's are' : ' is'} unanswered — these will be marked incorrect.
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="flex gap-3 justify-end mt-2">
-                                    <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
-                                        Go Back
-                                    </Button>
-                                    <Button variant="primary" onClick={handleFinalSubmit}>
-                                        Finalize & Submit
-                                    </Button>
+                                <div>
+                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Final Protocol</h3>
+                                    <span className="case-label text-[0.6rem]">Irreversible Transaction</span>
                                 </div>
                             </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </motion.div>
+
+                            <p className="text-sm text-muted-foreground mb-8 leading-relaxed font-medium">
+                                You are about to upload your analytical findings for <span className="text-white font-black">{round.title}</span>. Once the upload is finalized, your session for this phase will be locked.
+                            </p>
+
+                            {missingAnswers > 0 && (
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-5 mb-8 flex items-start gap-4">
+                                     <AlertTriangle size={20} className="text-destructive shrink-0" />
+                                     <div>
+                                        <p className="text-[0.7rem] font-black text-destructive uppercase tracking-widest mb-1">DATA_GAP_WARNING</p>
+                                        <p className="text-[0.7rem] text-muted-foreground font-bold uppercase tracking-tight">
+                                             {missingAnswers} investigation node(s) have no findings. Points will be lost.
+                                        </p>
+                                     </div>
+                                </div>
+                            )}
+
+                            <div className="flex gap-4">
+                                <button 
+                                    onClick={() => setShowSubmitModal(false)}
+                                    className="flex-1 h-14 font-black text-[0.75rem] uppercase tracking-widest text-muted-foreground hover:text-white transition-colors"
+                                >
+                                    Return to Analysis
+                                </button>
+                                <Button 
+                                    variant="primary" 
+                                    onClick={handleFinalSubmit} 
+                                    className="flex-1 h-14 bg-destructive text-white border-none"
+                                >
+                                    Execute Submission
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };

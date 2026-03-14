@@ -55,23 +55,23 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     const isCritical = timeLeft < 60000;
 
     return (
-        <div className="container max-w-[720px] mt-4 mb-2">
+        <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
             <div
                 className={cn(
-                    "flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl border shadow-sm transition-colors duration-300",
-                    isCritical ? "bg-red-600 text-white border-red-700 font-bold" :
-                        isWarning ? "bg-yellow-400 text-yellow-900 border-yellow-500 font-bold" :
-                            "bg-slate-800 text-white border-slate-700"
+                    "flex items-center justify-center gap-3 py-2 px-6 rounded-lg border-2 shadow-lg transition-colors duration-300",
+                    isCritical ? "bg-red-600 text-white border-red-700 shadow-red-900/20" :
+                        isWarning ? "bg-yellow-400 text-yellow-950 border-yellow-500 shadow-yellow-900/10" :
+                            "bg-slate-900 text-white border-slate-700 shadow-black/40"
                 )}
             >
                 {isWarning ? <AlertTriangle size={15} className="shrink-0" /> : <Clock size={15} className="shrink-0" />}
-                <span className="text-[0.78rem] tracking-wide font-semibold">
+                <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
                     {isCritical ? "TIME CRITICAL" : isWarning ? "WARNING" : "TIME REMAINING"}
                 </span>
-                <span className="mx-0.5 opacity-30">|</span>
+                <span className="mx-1 opacity-40">|</span>
                 <span
                     className={cn(
-                        "font-mono text-[0.9rem] font-bold tracking-wider",
+                        "font-mono text-[0.95rem] font-black tracking-widest",
                         isCritical && "animate-pulse"
                     )}
                 >

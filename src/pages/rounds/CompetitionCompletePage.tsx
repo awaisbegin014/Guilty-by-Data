@@ -1,9 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
-import { Trophy, LayoutDashboard, Star } from 'lucide-react';
+import { Trophy, LayoutDashboard, Star, ShieldCheck, Database, Award, BarChart4 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { motion } from 'framer-motion';
 
 export const CompetitionCompletePage: React.FC = () => {
     const navigate = useNavigate();
@@ -28,84 +27,86 @@ export const CompetitionCompletePage: React.FC = () => {
     const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
 
     return (
-        <motion.div
-            className="pt-12 pb-12"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
-            <div className="container max-w-[540px]">
-                <div className="bg-white rounded-[20px] overflow-hidden shadow-xl border border-border">
-
-                    {/* Dark header */}
-                    <div className="bg-slate-900 px-8 py-10 text-center relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_120%,rgba(234,179,8,0.08)_0%,transparent_60%)] pointer-events-none" />
-
-                        <motion.div
-                            className="relative w-[72px] h-[72px] rounded-full bg-yellow-100 border-4 border-amber-400 flex items-center justify-center mx-auto mb-5 shadow-[0_0_0_8px_rgba(251,191,36,0.12)]"
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                        >
-                            <Trophy size={34} className="text-amber-700" />
-                        </motion.div>
-                        <h1 className="relative text-[1.75rem] font-black text-slate-50 tracking-tight uppercase mb-1.5">
-                            Mission Accomplished
+        <div className="pt-10 pb-16">
+            <div className="container max-w-[640px]">
+                <div className="dossier-card rounded-2xl shadow-2xl overflow-hidden">
+                    
+                    {/* Official Verdict Header */}
+                    <div className="bg-slate-900 px-10 py-12 text-center border-b border-border relative">
+                        <div className="absolute top-0 right-0 p-4">
+                             <ShieldCheck size={32} className="text-white/5" />
+                        </div>
+                        <div className="w-20 h-20 rounded-full bg-primary/10 border-4 border-primary/20 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/20">
+                            <Award size={40} className="text-primary" />
+                        </div>
+                        <span className="case-label text-primary mb-2 block text-[0.6rem]">Final Verdict Delivered</span>
+                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter mb-3">
+                            Investigation Concluded
                         </h1>
-                        <p className="relative text-slate-500 text-sm">
-                            All corporate crises investigated
+                        <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-[0.6rem]">
+                            Registry Entry: COMP_COMP_7492
                         </p>
                     </div>
 
-                    {/* Body */}
-                    <div className="p-8 flex flex-col gap-6">
+                    {/* Report Content */}
+                    <div className="p-10 flex flex-col gap-8">
 
-                        <p className="text-center text-muted-foreground text-[0.9rem] leading-relaxed">
-                            Outstanding work, <strong className="text-slate-900">{team?.name || 'Investigator'}</strong>.
-                            Your team has reviewed all evidence datasets and submitted strategic findings to the leadership board.
-                        </p>
+                        <div className="text-center space-y-3">
+                            <p className="text-base text-slate-200 leading-relaxed font-normal">
+                                Commendable work, <span className="font-black text-primary uppercase">{team?.name || 'Investigator'}</span>.
+                            </p>
+                            <p className="text-sm text-muted-foreground leading-relaxed max-w-[440px] mx-auto font-medium">
+                                Your comprehensive analysis of the Ashworth datasets has been finalized. 
+                                The executive board has received your findings for deliberation.
+                            </p>
+                        </div>
 
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-3 gap-3">
+                        {/* Analytical Statistics */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {[
-                                { label: 'Total Score', value: totalPoints.toString(), sub: 'points', color: 'text-slate-900', bg: 'bg-slate-50', border: 'border-slate-200' },
-                                { label: 'Correct', value: `${totalCorrect}/${totalQuestions}`, sub: 'answers', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-                                { label: 'Accuracy', value: `${accuracy}%`, sub: 'rate', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+                                { label: 'Total Score', value: totalPoints.toLocaleString(), unit: 'PTS', icon: <Trophy size={14} />, color: 'text-primary' },
+                                { label: 'Finding Accuracy', value: accuracy + '%', unit: 'RATE', icon: <BarChart4 size={14} />, color: 'text-emerald-500' },
+                                { label: 'Nodes Resolved', value: `${totalCorrect}/${totalQuestions}`, unit: 'POINTS', icon: <Database size={14} />, color: 'text-white' },
                             ].map((stat, i) => (
-                                <motion.div
-                                    key={i}
-                                    className={`${stat.bg} border ${stat.border} rounded-xl px-3.5 py-4 text-center`}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.3 + i * 0.1 }}
-                                >
-                                    <p className="text-[0.68rem] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{stat.label}</p>
-                                    <p className={`text-2xl font-black ${stat.color} leading-none`}>{stat.value}</p>
-                                    <p className="text-[0.7rem] text-slate-400 mt-0.5">{stat.sub}</p>
-                                </motion.div>
+                                <div key={i} className="bg-secondary/30 border border-border rounded-xl p-5 text-center">
+                                    <div className={`flex items-center justify-center gap-1.5 mb-2 ${stat.color} opacity-60`}>
+                                        {stat.icon}
+                                        <span className="text-[0.6rem] font-black uppercase tracking-widest">{stat.label}</span>
+                                    </div>
+                                    <p className={`text-2xl font-black ${stat.color} font-mono leading-none mb-1`}>{stat.value}</p>
+                                    <p className="text-[0.55rem] text-muted-foreground font-bold font-mono tracking-widest">{stat.unit}</p>
+                                </div>
                             ))}
                         </div>
 
-                        {/* Rounds completed badge */}
-                        <div className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 border border-border rounded-[10px] text-[0.82rem] text-muted-foreground">
-                            <Star size={13} className="text-slate-500" />
-                            <span>{roundsCompleted} of {rounds.length} investigation rounds completed</span>
+                        {/* Completion Proof */}
+                        <div className="flex items-center justify-center gap-3 px-6 py-4 bg-slate-900/40 border border-dashed border-border rounded-xl">
+                            <Star size={16} className="text-primary" />
+                            <span className="text-[0.7rem] text-muted-foreground font-bold uppercase tracking-widest">
+                                {roundsCompleted} / {rounds.length} Case Files Successfully Processed
+                            </span>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex gap-3">
-                            <Button variant="outline" onClick={() => navigate('/dashboard')} className="flex-1">
-                                <LayoutDashboard size={16} />
-                                Home
+                        {/* Post-Mission Protocols */}
+                        <div className="flex gap-4">
+                            <Button variant="outline" size="lg" onClick={() => navigate('/dashboard')} className="flex-1 h-14 text-sm uppercase tracking-widest font-black">
+                                <LayoutDashboard size={16} className="mr-2" />
+                                <span>Return Home</span>
                             </Button>
-                            <Button variant="primary" onClick={() => navigate('/leaderboard')} className="flex-1">
-                                Rankings
-                                <Trophy size={16} />
+                            <Button variant="primary" size="lg" onClick={() => navigate('/leaderboard')} className="flex-1 h-14 text-sm uppercase tracking-widest font-black">
+                                <span>Official Standings</span>
+                                <Trophy size={16} className="ml-2" />
                             </Button>
                         </div>
                     </div>
                 </div>
+
+                <div className="mt-10 text-center">
+                    <p className="text-[0.65rem] text-muted-foreground font-bold uppercase tracking-[0.4em]">
+                        // End of Line // System Session Terminated Normally
+                    </p>
+                </div>
             </div>
-        </motion.div>
+        </div>
     );
 };

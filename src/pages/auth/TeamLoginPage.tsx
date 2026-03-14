@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { validTeams } from '../../data/mockData';
-import { Search, User, KeyRound, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Shield, Fingerprint, Key, AlertCircle, Database } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
 
 export const TeamLoginPage: React.FC = () => {
     const [teamName, setTeamName] = useState('');
@@ -19,7 +19,7 @@ export const TeamLoginPage: React.FC = () => {
         setError('');
 
         if (!teamName.trim() || !password.trim()) {
-            setError('Please enter both your Team Name and Access Key.');
+            setError('CREDENTIAL_ERROR: Please enter both Team Name and Access Key.');
             return;
         }
 
@@ -35,108 +35,117 @@ export const TeamLoginPage: React.FC = () => {
                 setTeam({ id: match.id, name: match.name });
                 navigate('/dashboard');
             } else {
-                setError('Invalid team name or access key. Please check your credentials.');
+                setError('AUTH_FAILED: Invalid credentials. Unauthorized access attempt logged.');
             }
-        }, 700);
+        }, 1000);
     };
 
     return (
-        <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-8 bg-background">
-            <motion.div
-                className="w-full max-w-[420px]"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-            >
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <div className="w-14 h-14 rounded-[14px] bg-slate-900 flex items-center justify-center mx-auto mb-4 shadow-[0_4px_12px_rgba(15,23,42,0.25)]">
-                        <Search size={26} className="text-slate-50" />
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background bg-analytical-grid">
+            <div className="w-full max-w-[400px]">
+                {/* Header Context */}
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-2">
+                        <Shield size={14} className="text-primary" />
+                        <span className="case-label text-[0.55rem]">Central Intelligence Node</span>
                     </div>
-                    <h1 className="text-[1.6rem] font-extrabold text-slate-900 mb-1.5">
-                        Case Access Portal
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Enter your team credentials to begin the investigation.
-                    </p>
+                    <div className="flex items-center gap-1.5 text-[0.5rem] text-muted-foreground font-mono font-bold uppercase tracking-wider">
+                        <Database size={10} />
+                        DB_SECURED
+                    </div>
                 </div>
 
-                {/* Card */}
-                <div className="bg-white border border-border rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden">
-                    <div className="p-8">
-                        <form onSubmit={handleLogin} className="flex flex-col gap-5">
-                            {/* Error */}
+                {/* Main Login Card */}
+                <div className="dossier-card rounded-xl shadow-2xl overflow-hidden">
+                    <div className="p-5 border-b border-border bg-slate-900/40">
+                        <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center mb-3 shadow-inner-glow">
+                            <Fingerprint size={24} className="text-primary" />
+                        </div>
+                        <h1 className="text-xl font-black text-white uppercase tracking-tight mb-0.5">
+                            Investigation Access
+                        </h1>
+                        <p className="text-[0.6rem] text-muted-foreground font-semibold uppercase tracking-wider">
+                            Enter mission credentials to authorize session
+                        </p>
+                    </div>
+
+                    <div className="p-5">
+                        <form onSubmit={handleLogin} className="flex flex-col gap-3.5">
+                            {/* Error Messaging */}
                             {error && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="flex items-start gap-2.5 px-4 py-3 bg-error-bg border border-error-border rounded-[10px] text-error-text text-[0.85rem] font-medium"
-                                >
-                                    <AlertCircle size={16} className="mt-px shrink-0" />
+                                <div className="flex items-start gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-[0.65rem] font-bold font-mono uppercase tracking-tight">
+                                    <AlertCircle size={12} className="shrink-0" />
                                     <span>{error}</span>
-                                </motion.div>
+                                </div>
                             )}
 
-                            {/* Team Name */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[0.8rem] font-bold text-slate-600 uppercase tracking-wide">
-                                    Team Name
+                            {/* Team Identity */}
+                            <div className="flex flex-col gap-1">
+                                <label className="case-label flex items-center gap-2 text-[0.55rem]">
+                                    <Database size={10} className="text-primary" />
+                                    Team Designation
                                 </label>
-                                <div className="relative">
-                                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                    <input
-                                        id="teamName"
-                                        type="text"
-                                        placeholder="e.g. Team Alpha"
-                                        value={teamName}
-                                        onChange={(e) => setTeamName(e.target.value)}
-                                        autoFocus
-                                        autoComplete="off"
-                                        className="w-full pl-9 pr-4 py-2.5 border-[1.5px] border-slate-300 rounded-[10px] bg-white text-slate-900 text-[0.9rem] outline-none font-sans leading-relaxed transition-colors duration-150 focus:border-primary focus:shadow-[0_0_0_3px_rgb(15_23_42/0.1)] placeholder:text-slate-400"
-                                    />
-                                </div>
+                                <input
+                                    id="teamName"
+                                    type="text"
+                                    placeholder="TEAMID_ALPHA"
+                                    value={teamName}
+                                    onChange={(e) => setTeamName(e.target.value)}
+                                    autoFocus
+                                    autoComplete="off"
+                                    className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-md text-white text-xs font-bold font-mono tracking-wider focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/30"
+                                />
                             </div>
 
                             {/* Access Key */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[0.8rem] font-bold text-slate-600 uppercase tracking-wide">
-                                    Access Key
+                            <div className="flex flex-col gap-1">
+                                <label className="case-label flex items-center gap-2 text-[0.55rem]">
+                                    <Key size={10} className="text-primary" />
+                                    Security Key
                                 </label>
-                                <div className="relative">
-                                    <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                    <input
-                                        id="password"
-                                        type="password"
-                                        placeholder="••••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-2.5 border-[1.5px] border-slate-300 rounded-[10px] bg-white text-slate-900 text-[0.9rem] outline-none font-sans leading-relaxed transition-colors duration-150 focus:border-primary focus:shadow-[0_0_0_3px_rgb(15_23_42/0.1)] placeholder:text-slate-400"
-                                    />
-                                </div>
+                                <input
+                                    id="password"
+                                    type="password"
+                                    placeholder="••••••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-md text-white text-xs font-bold font-mono tracking-widest focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/30"
+                                />
                             </div>
 
-                            {/* Submit */}
-                            <button
+                            {/* Authorization Submit */}
+                            <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="mt-2 w-full py-3 bg-slate-900 text-white border-none rounded-[10px] text-[0.9rem] font-bold cursor-pointer flex items-center justify-center gap-2 tracking-tight transition-all duration-150 hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-slate-700"
+                                className="mt-1 h-10 text-[0.7rem] uppercase tracking-widest"
                             >
                                 {isLoading ? (
-                                    <span className="opacity-80 text-[0.85rem]">Authenticating…</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Authorizing...</span>
+                                    </div>
                                 ) : (
-                                    'Access Case Files'
+                                    'Initialize Session'
                                 )}
-                            </button>
+                            </Button>
                         </form>
                     </div>
 
-                    <div className="px-8 py-3.5 border-t border-border bg-muted text-center">
-                        <p className="text-xs text-slate-400">
-                            Authorized personnel only · All access is logged
+                    <div className="px-5 py-3 bg-secondary/30 border-t border-border flex items-center justify-between">
+                        <p className="text-[0.55rem] text-muted-foreground font-bold font-mono uppercase tracking-widest leading-none">
+                            Identity Verification Required
                         </p>
+                        <Shield size={10} className="text-muted-foreground/40" />
                     </div>
                 </div>
-            </motion.div>
+
+                {/* Footer Disclaimer */}
+                <div className="mt-3 text-center">
+                    <p className="text-[0.5rem] text-muted-foreground font-medium uppercase tracking-[0.2em] opacity-50">
+                        Classified access only // GATEWAY_7492
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };

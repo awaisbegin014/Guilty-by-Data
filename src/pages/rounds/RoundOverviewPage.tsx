@@ -2,10 +2,9 @@ import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { TimerBanner } from '../../components/TimerBanner';
-import { FileText, Database, ArrowRight, CheckCircle2, Circle, ExternalLink } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Database, ArrowRight, ShieldAlert, Download, Briefcase } from 'lucide-react';
+import { Badge } from '../../components/ui/Badge';
 
 export const RoundOverviewPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -18,16 +17,10 @@ export const RoundOverviewPage: React.FC = () => {
         if (roundId && unlockedRounds.includes(roundId)) {
             startRound(roundId);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [roundId]);
+    }, [roundId, startRound, unlockedRounds]);
 
     if (!round) {
-        return <div className="container p-8">Case file not found.</div>;
-    }
-
-    if (round.status === 'closed') {
-        navigate('/dashboard', { replace: true });
-        return null;
+        return <div className="container p-20 text-center"><p className="case-label">Error: File Not Found</p></div>;
     }
 
     const progress = roundsProgress[round.id];
@@ -42,107 +35,132 @@ export const RoundOverviewPage: React.FC = () => {
         if (round.datasetLink) {
             window.open(round.datasetLink, '_blank', 'noopener,noreferrer');
         } else {
-            alert('No dataset link configured yet. Please check with the organiser.');
+            alert('SYSTEM_MSG: No external dataset link configured.');
         }
     };
 
-    const Section = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
-        <div className="bg-white border border-border rounded-[14px] overflow-hidden shadow-sm">
-            <div className="px-5 py-4 border-b border-border flex items-center gap-2.5 bg-slate-50">
-                <span className="text-muted-foreground">{icon}</span>
-                <h3 className="text-[0.9rem] font-bold text-slate-900">{title}</h3>
-            </div>
-            <div className="p-5">{children}</div>
-        </div>
-    );
-
     return (
-        <motion.div
-            className="pt-4 pb-12"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
+        <div className="pt-2 pb-16">
             <TimerBanner roundId={round.id} />
 
-            <div className="container max-w-[720px] mt-6">
-
-                {/* Header */}
-                <div className="mb-7">
-                    <Badge variant="info" className="mb-3">Active Investigation</Badge>
-                    <h2 className="text-[1.75rem] font-extrabold text-slate-900 mb-1.5">
-                        {round.title}
-                    </h2>
-                    <p className="text-muted-foreground text-[0.95rem]">{round.objective}</p>
+            <div className="container max-w-[900px] mt-6">
+                
+                {/* Header: Commands and Status */}
+                <div className="flex flex-col gap-6 mb-16">
+                    <div className="flex items-center gap-3">
+                         <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_8px_rgba(74,124,157,0.4)]" />
+                         <span className="text-[0.7rem] font-black font-mono text-white/90 uppercase tracking-[0.3em]">
+                            Investigation Registry // Phase 0{round.id.at(-1)}
+                         </span>
+                    </div>
+                    <div>
+                        <h1 className="text-5xl font-black text-white uppercase tracking-tighter leading-tight mb-3">
+                            {round.title}
+                        </h1>
+                        <p className="text-lg text-slate-400 font-medium max-w-2xl leading-relaxed italic">
+                            {round.objective}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex flex-col gap-4">
-
-                    {/* Case Brief */}
-                    <Section title="Case Brief" icon={<FileText size={18} />}>
-                        <p className="text-slate-700 leading-relaxed text-[0.9rem]">
-                            {round.caseBrief}
-                        </p>
-                    </Section>
-
-                    {/* Dataset */}
-                    <Section title="Evidence Dataset" icon={<Database size={18} />}>
-                        <div className="bg-slate-50 border border-border rounded-[10px] px-4 py-3.5 mb-4">
-                            <p className="text-[0.85rem] font-bold text-slate-900 mb-1">
-                                {round.datasetTitle}
-                            </p>
-                            <p className="text-[0.82rem] text-muted-foreground">
-                                {round.datasetDescription}
+                {/* Case Flow Stack */}
+                <div className="flex flex-col gap-12">
+                    
+                    {/* 1. Formal Briefing Focal Point */}
+                    <div className="dossier-card rounded-2xl overflow-hidden shadow-2xl border-[#2d333a]">
+                        <div className="px-10 py-6 border-b border-border bg-slate-900/40 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Briefcase size={18} className="text-primary" />
+                                <h3 className="text-[0.7rem] font-black text-white uppercase tracking-[0.2em]">Formal Briefing Dossier</h3>
+                            </div>
+                            <span className="text-[0.6rem] font-mono text-muted-foreground font-black tracking-widest">CONFIDENTIAL</span>
+                        </div>
+                        <div className="p-12 relative">
+                            <div className="absolute left-0 top-12 bottom-12 w-1 bg-primary/20" />
+                            <p className="text-xl text-slate-200 leading-relaxed font-normal whitespace-pre-wrap selection:bg-primary/30">
+                                {round.caseBrief}
                             </p>
                         </div>
-                        <Button variant="outline" onClick={handleDatasetAccess}>
-                            <ExternalLink size={15} />
-                            {round.datasetLink ? 'Open Dataset File' : 'Request Dataset Access'}
-                        </Button>
-                    </Section>
+                    </div>
 
-                    {/* Checklist */}
-                    <Section title="Investigation Checklist" icon={<CheckCircle2 size={18} />}>
-                        <div className="flex flex-col gap-3">
-                            {[
-                                { label: 'Review Case Brief', done: true },
-                                { label: 'Open Evidence Dataset', done: !!progress?.datasetOpened },
-                                { label: 'Read Investigation Documentation', done: !!progress?.docsVisited },
-                            ].map((item, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    {item.done
-                                        ? <CheckCircle2 size={18} className="text-green-600" />
-                                        : <Circle size={18} className="text-slate-300" />}
-                                    <span className={`text-sm ${item.done ? 'text-slate-900 font-medium' : 'text-muted-foreground'}`}>
-                                        {item.label}
-                                    </span>
+                    {/* 2. Unified Action Dossier (Resources + Button) */}
+                    <div className="dossier-card rounded-2xl overflow-hidden border-[#2d333a] shadow-inner-glow">
+                        <div className="px-10 py-6 border-b border-border bg-slate-900/60 flex items-center gap-3">
+                            <ShieldAlert size={18} className="text-primary" />
+                            <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Investigation Protocols & Resources</h4>
+                        </div>
+                        
+                        <div className="p-2 space-y-2">
+                            {/* Documentation Row */}
+                            <div className="p-8 rounded-xl bg-slate-900/40 border border-border/40 flex items-center gap-8 group transition-all duration-300 hover:border-primary/20 hover:bg-slate-900/60">
+                                <div className="w-14 h-14 rounded-lg bg-secondary border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <ShieldAlert size={24} />
                                 </div>
-                            ))}
-                        </div>
-                    </Section>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h5 className="text-sm font-black text-white uppercase tracking-tight">Review Field Protocols</h5>
+                                        <Badge variant="outline" className="text-[0.55rem] font-black tracking-widest bg-primary/5 border-primary/20">DOCUMENTATION</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed font-medium line-clamp-1 max-w-md">
+                                        Review case protocols, analytical tips, and investigation rules.
+                                    </p>
+                                </div>
+                                <Button 
+                                    variant="secondary" 
+                                    size="sm" 
+                                    className="h-10 px-6 rounded-lg font-black uppercase tracking-widest text-[0.6rem]" 
+                                    onClick={() => navigate(`/round/${round.id}/docs`)}
+                                >
+                                    <ArrowRight size={14} className="mr-2" />
+                                    <span>Read Docs</span>
+                                </Button>
+                            </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-3.5 pt-2">
-                        <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => navigate(`/round/${round.id}/docs`)}
-                        >
-                            <FileText size={16} />
-                            View Documentation
-                        </Button>
-                        <Button
-                            variant="primary"
-                            className="flex-1"
-                            onClick={() => navigate(`/round/${round.id}/q/0`)}
-                        >
-                            Start Interrogation
-                            <ArrowRight size={16} />
-                        </Button>
+                            {/* Dataset Row */}
+                            <div className="p-8 rounded-xl bg-slate-900/40 border border-border/40 flex items-center gap-8 group transition-all duration-300 hover:border-primary/20 hover:bg-slate-900/60">
+                                <div className="w-14 h-14 rounded-lg bg-secondary border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                    <Database size={24} />
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h5 className="text-sm font-black text-white uppercase tracking-tight">Access Case Evidence</h5>
+                                        <Badge variant="outline" className="text-[0.55rem] font-black tracking-widest bg-primary/5 border-primary/20">DATASET</Badge>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground leading-relaxed font-medium line-clamp-1 max-w-md">
+                                        Download available forensic logs and financial datasets for analysis.
+                                    </p>
+                                </div>
+                                <Button variant="secondary" size="sm" className="h-10 px-6 rounded-lg font-black uppercase tracking-widest text-[0.6rem]" onClick={handleDatasetAccess}>
+                                    <Download size={14} className="mr-2" />
+                                    <span>Access File</span>
+                                </Button>
+                            </div>
+
+
+                            {/* Final Action Row */}
+                            <div className="p-10 bg-primary/[0.03] border-t border-border mt-4 flex flex-col items-center">
+                                <p className="text-[0.65rem] font-black text-muted-foreground uppercase tracking-[0.4em] mb-8 text-center">
+                                    Proceed to Analytical Interrogation
+                                </p>
+                                <Button
+                                    variant="primary"
+                                    size="lg"
+                                    className="w-full max-w-[400px] h-16 rounded-xl shadow-xl shadow-primary/10 group transition-all duration-500 hover:scale-[1.02]"
+                                    onClick={() => navigate(`/round/${round.id}/q/0`)}
+                                >
+                                    <span className="font-black uppercase tracking-[0.3em] text-[0.9rem] ml-4">Initialize Analysis</span>
+                                    <ArrowRight size={22} className="ml-4 group-hover:translate-x-2 transition-transform duration-300" />
+                                </Button>
+                                <div className="mt-6 flex items-center gap-2 opacity-50">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[0.55rem] font-black font-mono uppercase tracking-widest">Registry State: Ready</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
             </div>
-        </motion.div>
+        </div>
     );
 };

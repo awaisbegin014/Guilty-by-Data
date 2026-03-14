@@ -4,27 +4,22 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[10px] text-sm font-semibold tracking-[0.005em] transition-all cursor-pointer border-[1.5px] border-transparent outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex items-center justify-center whitespace-nowrap text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        primary:
-          "bg-primary text-primary-foreground border-primary hover:bg-slate-800 hover:border-slate-800 hover:shadow-[0_2px_8px_rgb(15_23_42/0.25)]",
-        secondary:
-          "bg-secondary text-secondary-foreground border-border hover:bg-slate-200 hover:border-slate-300",
-        outline:
-          "bg-transparent text-foreground border-slate-300 hover:bg-muted hover:border-slate-400",
-        destructive:
-          "bg-destructive text-destructive-foreground border-destructive hover:bg-red-600",
-        ghost:
-          "bg-transparent text-foreground border-transparent hover:bg-muted",
-        link: "text-primary underline-offset-4 hover:underline border-transparent",
+        primary: "bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/10 uppercase tracking-widest",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border uppercase tracking-widest",
+        outline: "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground text-muted-foreground uppercase tracking-widest",
+        ghost: "hover:bg-accent hover:text-accent-foreground text-muted-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        subtle: "bg-slate-900/50 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/50 uppercase tracking-widest",
       },
       size: {
-        default: "h-9 px-[1.125rem] py-2",
-        sm: "h-8 rounded-lg px-3 text-xs",
-        lg: "h-10 rounded-xl px-6",
-        icon: "h-9 w-9",
+        default: "h-11 px-6 rounded-md",
+        sm: "h-9 px-4 rounded-md text-xs",
+        lg: "h-14 px-10 rounded-lg text-base",
+        icon: "h-10 w-10 rounded-md",
       },
     },
     defaultVariants: {
@@ -38,15 +33,14 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
-  fullWidth?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, fullWidth, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }), fullWidth && "w-full")}
+        className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         {...props}
       />

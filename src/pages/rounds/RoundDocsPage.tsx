@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
-import { FileText, ArrowLeft, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ArrowLeft, ArrowRight, ShieldCheck, FileSearch, Notebook } from 'lucide-react';
 
 export const RoundDocsPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -21,7 +20,7 @@ export const RoundDocsPage: React.FC = () => {
     }, [roundId, markDocsVisited, progress?.status]);
 
     if (!round) {
-        return <div className="container p-8">Case file not found.</div>;
+        return <div className="container p-20 text-center"><p className="case-label">Reference Material Not Found</p></div>;
     }
 
     if (round.status === 'closed') {
@@ -35,71 +34,75 @@ export const RoundDocsPage: React.FC = () => {
     }
 
     return (
-        <motion.div
-            className="pt-4 pb-12"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
+        <div className="pt-8 pb-20">
             <TimerBanner roundId={round.id} />
 
-            <div className="container max-w-[720px] mt-6">
+            <div className="container max-w-[850px] mt-10">
 
-                {/* Header */}
-                <div className="flex items-start justify-between mb-7 gap-4">
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
-                            <FileText size={22} />
+                {/* Header Context */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-12 pb-8 border-b border-border">
+                    <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-lg bg-secondary border border-border flex items-center justify-center text-primary shadow-inner-glow">
+                            <Notebook size={28} />
                         </div>
                         <div>
-                            <h2 className="text-[1.4rem] font-extrabold text-slate-900 leading-tight">
-                                Investigation Docs
+                             <div className="flex items-center gap-2 mb-1.5">
+                                 <FileSearch size={14} className="text-primary" />
+                                 <span className="case-label">Technical Dossier</span>
+                             </div>
+                            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                                Field Manual
                             </h2>
-                            <p className="text-[0.8rem] text-muted-foreground mt-0.5">{round.title}</p>
                         </div>
                     </div>
-                    <Button variant="outline" onClick={() => navigate(`/round/${round.id}`)}>
-                        <ArrowLeft size={15} />
-                        Back
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/round/${round.id}`)} className="w-full sm:w-auto font-black uppercase tracking-widest text-[0.7rem] px-5">
+                        <ArrowLeft size={14} className="mr-2" />
+                        Return to Briefing
                     </Button>
                 </div>
 
-                {/* Docs */}
-                <div className="flex flex-col gap-4 mb-6">
+                {/* Documentation Sections */}
+                <div className="flex flex-col gap-10 mb-12">
                     {round.documentation.map((doc, idx) => (
-                        <motion.div
-                            key={idx}
-                            className="bg-white border border-border rounded-[14px] overflow-hidden shadow-sm"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3, delay: idx * 0.08 }}
-                        >
-                            <div className="px-5 py-3.5 border-b border-border bg-slate-50">
-                                <h3 className="text-[0.85rem] font-bold text-slate-900 uppercase tracking-wide">
-                                    {doc.sectionTitle}
-                                </h3>
+                        <div key={idx} className="dossier-card rounded-xl overflow-hidden group">
+                            <div className="px-8 py-4 border-b border-border bg-slate-900/40 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <span className="w-6 h-6 rounded bg-primary text-white font-mono font-black text-[0.6rem] flex items-center justify-center">0{idx + 1}</span>
+                                    <h3 className="text-[0.75rem] font-black text-white uppercase tracking-widest">
+                                        Section: {doc.sectionTitle}
+                                    </h3>
+                                </div>
+                                <ShieldCheck size={14} className="text-muted-foreground/30 group-hover:text-primary transition-colors" />
                             </div>
-                            <div className="p-5">
-                                <p className="text-[0.9rem] text-slate-700 leading-relaxed border-l-[3px] border-slate-300 pl-3.5 italic">
+                            <div className="p-10 bg-slate-900/10">
+                                <p className="text-lg text-slate-300 leading-relaxed font-medium border-l-[3px] border-primary/20 pl-8 py-2">
                                     {doc.content}
                                 </p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
-                {/* Action */}
-                <div className="flex justify-end">
+                {/* Tactical Footer Action */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-10 p-12 bg-secondary/20 border border-border rounded-xl">
+                    <div className="max-w-[340px]">
+                        <h4 className="text-sm font-black text-white uppercase mb-2">Intel Review Complete?</h4>
+                        <p className="text-[0.7rem] text-muted-foreground font-bold uppercase tracking-wider leading-relaxed">
+                            Verify all technical assumptions before initializing the finding submission node.
+                        </p>
+                    </div>
                     <Button
                         variant="primary"
+                        size="lg"
                         onClick={() => navigate(`/round/${round.id}/q/0`)}
+                        className="w-full sm:w-auto min-w-[260px] h-16"
                     >
-                        Proceed to Interrogation
-                        <ArrowRight size={16} />
+                        <span>Initiate Interrogation</span>
+                        <ArrowRight size={20} className="ml-3" />
                     </Button>
                 </div>
 
             </div>
-        </motion.div>
+        </div>
     );
 };

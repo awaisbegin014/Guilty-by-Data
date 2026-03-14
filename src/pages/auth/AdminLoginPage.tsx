@@ -30,49 +30,49 @@ export const AdminLoginPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 p-8">
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
             <motion.div
-                className="w-full max-w-[400px]"
-                initial={{ opacity: 0, y: 20 }}
+                className="w-full max-w-[380px]"
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
             >
                 {/* Brand mark */}
-                <div className="text-center mb-8">
-                    <div className="w-14 h-14 rounded-[14px] bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-4">
-                        <ShieldCheck size={26} className="text-slate-400" />
+                <div className="text-center mb-4">
+                    <div className="w-10 h-10 rounded-[10px] bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-2 shadow-inner-glow">
+                        <ShieldCheck size={20} className="text-slate-400" />
                     </div>
-                    <h1 className="text-[1.4rem] font-extrabold text-slate-50 mb-1">
+                    <h1 className="text-[1.1rem] font-extrabold text-slate-50 mb-0.5">
                         Restricted Access
                     </h1>
-                    <p className="text-[0.8rem] text-slate-500 uppercase tracking-wider font-semibold">
+                    <p className="text-[0.6rem] text-slate-500 uppercase tracking-widest font-bold">
                         Authorized Organizers Only
                     </p>
                 </div>
 
                 {/* Card */}
-                <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden shadow-[0_25px_50px_rgba(0,0,0,0.4)]">
-                    <div className="p-8">
-                        <form onSubmit={handleLogin} className="flex flex-col gap-5">
+                <div className="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+                    <div className="p-7">
+                        <form onSubmit={handleLogin} className="flex flex-col gap-4">
                             {/* Error */}
                             {error && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    className="flex items-center gap-2.5 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-[10px] text-red-300 text-[0.85rem] font-medium"
+                                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-red-300 text-[0.75rem] font-bold"
                                 >
-                                    <AlertCircle size={15} className="shrink-0" />
+                                    <AlertCircle size={14} className="shrink-0" />
                                     <span>{error}</span>
                                 </motion.div>
                             )}
 
                             {/* Admin ID */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[0.72rem] font-bold text-slate-500 uppercase tracking-wider">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest">
                                     Admin Identifier
                                 </label>
                                 <div className="relative">
-                                    <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" />
+                                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" />
                                     <input
                                         type="text"
                                         value={adminId}
@@ -80,25 +80,25 @@ export const AdminLoginPage: React.FC = () => {
                                         placeholder="Enter ID…"
                                         required
                                         autoFocus
-                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border-[1.5px] border-slate-700 rounded-[10px] text-slate-200 text-[0.9rem] outline-none font-sans transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600"
+                                        className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-md text-slate-200 text-sm outline-none font-sans transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600 font-medium"
                                     />
                                 </div>
                             </div>
 
                             {/* Password */}
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[0.72rem] font-bold text-slate-500 uppercase tracking-wider">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest">
                                     Master Key
                                 </label>
                                 <div className="relative">
-                                    <KeyRound size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" />
+                                    <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" />
                                     <input
                                         type="password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         required
-                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border-[1.5px] border-slate-700 rounded-[10px] text-slate-200 text-[0.9rem] outline-none font-sans tracking-widest transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600"
+                                        className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-md text-slate-200 text-sm outline-none font-sans tracking-widest transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600"
                                     />
                                 </div>
                             </div>
@@ -107,16 +107,16 @@ export const AdminLoginPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={isLoading}
-                                className="mt-1 w-full py-3 bg-slate-50 text-slate-900 border-none rounded-[10px] text-sm font-bold cursor-pointer tracking-wide transition-all duration-150 hover:bg-slate-200 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-700"
+                                className="mt-1 w-full py-2.5 bg-slate-50 text-slate-900 border-none rounded-md text-xs font-black uppercase tracking-widest cursor-pointer transition-all duration-150 hover:bg-white active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? 'Authenticating…' : 'Override Protocol'}
                             </button>
                         </form>
                     </div>
 
-                    <div className="px-8 py-3.5 border-t border-slate-700 bg-slate-900 text-center">
-                        <p className="text-[0.72rem] text-slate-600">
-                            All admin sessions are monitored and logged
+                    <div className="px-7 py-3 border-t border-slate-700 bg-slate-900/50 text-center">
+                        <p className="text-[0.6rem] text-slate-600 font-bold uppercase tracking-wider">
+                            Access monitored & logged
                         </p>
                     </div>
                 </div>

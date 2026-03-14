@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAppStore } from '../store/useAppStore';
-import { LayoutDashboard, Target, HelpCircle, LogOut, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Target, HelpCircle, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const AdminLayout: React.FC = () => {
@@ -15,77 +15,65 @@ export const AdminLayout: React.FC = () => {
     };
 
     const navItems = [
-        { path: '/admin/dashboard', icon: <LayoutDashboard size={15} />, label: 'Overview' },
-        { path: '/admin/rounds', icon: <Target size={15} />, label: 'Rounds' },
-        { path: '/admin/questions', icon: <HelpCircle size={15} />, label: 'Questions' },
+        { path: '/admin/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+        { path: '/admin/rounds', icon: <Target size={18} />, label: 'Rounds' },
+        { path: '/admin/questions', icon: <HelpCircle size={18} />, label: 'Questions' },
     ];
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50">
+        <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
 
-            {/* ── Header ── */}
-            <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950">
-                <div className="container h-14 flex items-center justify-between gap-8">
+            {/* Admin Header */}
+            <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
+                <div className="container h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-8">
+                        <Link to="/admin/dashboard" className="flex items-center gap-2 no-underline group">
+                            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
+                                <Target size={20} />
+                            </div>
+                            <span className="text-xl font-bold text-foreground">GBD Admin</span>
+                        </Link>
 
-                    {/* Brand */}
-                    <div className="flex items-center gap-2.5 shrink-0">
-                        <ShieldCheck size={17} className="text-slate-300" />
-                        <span className="text-[0.85rem] font-bold tracking-tight text-white">
-                            GBD Admin
-                        </span>
-                        <span className="rounded border border-slate-700 bg-slate-900 px-1.5 py-[1px] text-[0.6rem] font-semibold uppercase tracking-wider text-slate-300">
-                            Control
-                        </span>
+                        <nav className="hidden md:flex items-center gap-1">
+                            {navItems.map((item) => {
+                                const isActive = location.pathname.startsWith(item.path);
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        to={item.path}
+                                        className={cn(
+                                            'inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors no-underline',
+                                            isActive
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                        )}
+                                    >
+                                        {item.icon}
+                                        <span>{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
                     </div>
 
-                    {/* Nav */}
-                    <nav className="flex items-center gap-1 flex-1 justify-center">
-                        {navItems.map((item) => {
-                            const isActive = location.pathname.startsWith(item.path);
-                            return (
-                                <Link
-                                    key={item.path}
-                                    to={item.path}
-                                    className={cn(
-                                        'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[0.82rem] font-semibold no-underline transition-colors duration-150',
-                                        isActive
-                                            ? 'bg-slate-700 text-white'
-                                            : 'text-white hover:text-white hover:bg-slate-800'
-                                    )}
-                                >
-                                    {React.cloneElement(item.icon, { size: 16 })}
-                                    <span>{item.label}</span>
-                                </Link>
-                            );
-                        })}
-                    </nav>
-
-                    {/* Sign out */}
-                    <button
-                        onClick={handleLogout}
-                        className="shrink-0 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-700 bg-transparent px-3 py-1.5 text-[0.78rem] font-semibold text-slate-200 transition-colors duration-150 hover:border-slate-500 hover:bg-slate-800 hover:text-white"
-                    >
-                        <LogOut size={13} />
-                        Sign Out
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleLogout}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                            <LogOut size={16} />
+                            <span>Sign Out</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* ── Main content ── */}
-            <main className="flex-1 py-8 pb-12">
-                <div className="container">
+            {/* Main content */}
+            <main className="flex-1 overflow-y-auto p-8 bg-muted/30">
+                <div className="container max-w-7xl mx-auto">
                     <Outlet />
                 </div>
             </main>
-
-            {/* ── Footer ── */}
-            <footer className="border-t border-slate-200/80 bg-gradient-to-b from-white to-slate-50 py-4">
-                <div className="container text-center">
-                    <p className="text-[0.72rem] text-slate-400 font-medium">
-                        © {new Date().getFullYear()} Guilty by Data · Admin Panel · Authorized Access Only
-                    </p>
-                </div>
-            </footer>
         </div>
     );
 };
