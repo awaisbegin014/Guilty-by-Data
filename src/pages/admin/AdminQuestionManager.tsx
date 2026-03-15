@@ -1,70 +1,112 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { Edit3, Trash2, Plus, Check, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Question } from '../../types';
 
+function buildNewQuestion(roundId: string, questionIndex: number): Question {
+    const newId = `temp-${Date.now()}`;
+    return {
+        id: newId,
+        roundId,
+        questionIndex,
+        text: 'New Question',
+        correctOptionId: `${newId}-a`,
+        options: [
+            { id: `${newId}-a`, text: 'Option A' },
+            { id: `${newId}-b`, text: 'Option B' },
+            { id: `${newId}-c`, text: 'Option C' },
+            { id: `${newId}-d`, text: 'Option D' },
+        ],
+        type: 'mcq',
+        inputType: null,
+    };
+}
+
 export const AdminQuestionManager: React.FC = () => {
-    const { rounds, updateRound } = useAppStore();
+    const { rounds, saveQuestion, deleteQuestion, error } = useAppStore();
     const [selectedRoundId, setSelectedRoundId] = useState<string>(rounds[0]?.id || '');
     const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Question>>({});
+    const [pendingNewQuestion, setPendingNewQuestion] = useState<Question | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const activeRound = rounds.find(r => r.id === selectedRoundId);
+    useEffect(() => {
+        if (!selectedRoundId && rounds[0]) {
+            setSelectedRoundId(rounds[0].id);
+        }
+    }, [rounds, selectedRoundId]);
+
+    const activeRound = rounds.find((round) => round.id === selectedRoundId);
+    const questions = activeRound
+        ? pendingNewQuestion && pendingNewQuestion.roundId === activeRound.id
+            ? [...activeRound.questions, pendingNewQuestion]
+            : activeRound.questions
+        : [];
 
     const handleSelectRound = (id: string) => {
         setSelectedRoundId(id);
         setEditingQuestionId(null);
+        setPendingNewQuestion(null);
     };
 
     const handleAddQuestion = () => {
         if (!activeRound) return;
-        const newId = `q_new_${Date.now()}`;
-        const newQuestion: Question = {
-            id: newId,
-            roundId: activeRound.id,
-            questionIndex: activeRound.questions.length,
-            text: 'New Question',
-            correctOptionId: `${newId}_a`,
-            options: [
-                { id: `${newId}_a`, text: 'Option A' },
-                { id: `${newId}_b`, text: 'Option B' },
-                { id: `${newId}_c`, text: 'Option C' },
-                { id: `${newId}_d`, text: 'Option D' },
-            ],
-        };
-        updateRound(activeRound.id, { questions: [...activeRound.questions, newQuestion] });
-        startEditing(newQuestion);
+        const question = buildNewQuestion(activeRound.id, activeRound.questions.length);
+        setPendingNewQuestion(question);
+        setEditingQuestionId(question.id);
+        setEditForm(JSON.parse(JSON.stringify(question)));
     };
 
-    const handleDeleteQuestion = (qId: string) => {
+    const handleDeleteQuestion = async (qId: string) => {
         if (!activeRound) return;
+
+        if (pendingNewQuestion?.id === qId) {
+            setPendingNewQuestion(null);
+            if (editingQuestionId === qId) {
+                setEditingQuestionId(null);
+            }
+            return;
+        }
+
         if (window.confirm('Are you sure you want to delete this question?')) {
-            updateRound(activeRound.id, {
-                questions: activeRound.questions.filter(q => q.id !== qId),
-            });
-            if (editingQuestionId === qId) setEditingQuestionId(null);
+            await deleteQuestion(qId);
+            if (editingQuestionId === qId) {
+                setEditingQuestionId(null);
+            }
         }
     };
 
-    const startEditing = (q: Question) => {
-        setEditingQuestionId(q.id);
-        setEditForm(JSON.parse(JSON.stringify(q)));
+    const startEditing = (question: Question) => {
+        setEditingQuestionId(question.id);
+        setEditForm(JSON.parse(JSON.stringify(question)));
     };
 
-    const saveEdit = () => {
-        if (!activeRound || !editingQuestionId || !editForm.text) return;
-        const updated = activeRound.questions.map(q =>
-            q.id === editingQuestionId ? (editForm as Question) : q
-        );
-        updateRound(activeRound.id, { questions: updated });
-        setEditingQuestionId(null);
+    const saveEdit = async () => {
+        if (!activeRound || !editingQuestionId || !editForm.text || !editForm.options) return;
+
+        setIsSaving(true);
+        try {
+            await saveQuestion(activeRound.id, editForm as Question);
+            if (pendingNewQuestion?.id === editingQuestionId) {
+                setPendingNewQuestion(null);
+            }
+            setEditingQuestionId(null);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     if (!activeRound) return null;
 
     return (
         <div className="flex flex-col gap-8">
+            {error && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
             <div className="flex items-center justify-between border-b border-border pb-6">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center">
@@ -72,7 +114,7 @@ export const AdminQuestionManager: React.FC = () => {
                     </div>
                     <h1 className="text-2xl font-extrabold text-slate-900">Question Manager</h1>
                 </div>
-                <button 
+                <button
                     onClick={handleAddQuestion}
                     className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold cursor-pointer hover:bg-slate-800 transition-colors"
                 >
@@ -81,10 +123,9 @@ export const AdminQuestionManager: React.FC = () => {
             </div>
 
             <div className="flex gap-8 items-start">
-                {/* Sidebar */}
                 <div className="w-[200px] shrink-0 flex flex-col gap-2">
                     <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Round</p>
-                    {rounds.map(round => {
+                    {rounds.map((round) => {
                         const isActive = selectedRoundId === round.id;
                         return (
                             <button
@@ -106,22 +147,21 @@ export const AdminQuestionManager: React.FC = () => {
                     })}
                 </div>
 
-                {/* Main */}
                 <div className="flex-1 flex flex-col gap-6">
-                    {activeRound.questions.map((q, qIndex) => {
-                        const isEditing = editingQuestionId === q.id;
+                    {questions.map((question, qIndex) => {
+                        const isEditing = editingQuestionId === question.id;
 
                         if (isEditing) {
                             return (
-                                <div key={q.id} className="bg-white border-2 border-slate-900 rounded-[14px] p-6 shadow-xl">
+                                <div key={question.id} className="bg-white border-2 border-slate-900 rounded-[14px] p-6 shadow-xl">
                                     <div className="flex items-center justify-between mb-6">
                                         <h4 className="text-sm font-bold text-slate-900">Edit Question {qIndex + 1}</h4>
                                         <div className="flex gap-2">
                                             <button onClick={() => setEditingQuestionId(null)} className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-xs font-semibold cursor-pointer">
                                                 Cancel
                                             </button>
-                                            <button onClick={saveEdit} className="px-3 py-1.5 bg-slate-900 border-none rounded-lg text-white text-xs font-semibold cursor-pointer">
-                                                Save Question
+                                            <button onClick={() => void saveEdit()} disabled={isSaving} className="px-3 py-1.5 bg-slate-900 border-none rounded-lg text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
+                                                {isSaving ? 'Saving...' : 'Save Question'}
                                             </button>
                                         </div>
                                     </div>
@@ -132,30 +172,30 @@ export const AdminQuestionManager: React.FC = () => {
                                             <textarea
                                                 className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm text-slate-900 outline-none focus:border-slate-900 min-h-[80px]"
                                                 value={editForm.text}
-                                                onChange={e => setEditForm({ ...editForm, text: e.target.value })}
+                                                onChange={(event) => setEditForm({ ...editForm, text: event.target.value })}
                                             />
                                         </div>
 
                                         <div className="space-y-3">
                                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Options (Select the correct one)</label>
-                                            {editForm.options?.map((opt, idx) => (
-                                                <div key={opt.id} className="flex items-center gap-3">
+                                            {editForm.options?.map((option, idx) => (
+                                                <div key={option.id} className="flex items-center gap-3">
                                                     <button
                                                         className={cn(
                                                             "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-colors",
-                                                            editForm.correctOptionId === opt.id ? "bg-green-600 text-white" : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                                                            editForm.correctOptionId === option.id ? "bg-green-600 text-white" : "bg-slate-100 text-slate-400 hover:bg-slate-200"
                                                         )}
-                                                        onClick={() => setEditForm({ ...editForm, correctOptionId: opt.id })}
+                                                        onClick={() => setEditForm({ ...editForm, correctOptionId: option.id })}
                                                     >
-                                                        {editForm.correctOptionId === opt.id ? <Check size={14} /> : String.fromCharCode(65 + idx)}
+                                                        {editForm.correctOptionId === option.id ? <Check size={14} /> : String.fromCharCode(65 + idx)}
                                                     </button>
                                                     <input
                                                         className="flex-1 px-3.5 py-2 border-[1.5px] border-slate-200 rounded-[10px] text-sm text-slate-900 outline-none focus:border-slate-900"
-                                                        value={opt.text}
-                                                        onChange={e => {
-                                                            const opts = [...(editForm.options || [])];
-                                                            opts[idx] = { ...opts[idx], text: e.target.value };
-                                                            setEditForm({ ...editForm, options: opts });
+                                                        value={option.text}
+                                                        onChange={(event) => {
+                                                            const options = [...(editForm.options || [])];
+                                                            options[idx] = { ...options[idx], text: event.target.value };
+                                                            setEditForm({ ...editForm, options });
                                                         }}
                                                     />
                                                 </div>
@@ -167,28 +207,28 @@ export const AdminQuestionManager: React.FC = () => {
                         }
 
                         return (
-                            <div key={q.id} className="bg-white border border-border rounded-[14px] p-5 hover:border-slate-300 transition-colors group">
+                            <div key={question.id} className="bg-white border border-border rounded-[14px] p-5 hover:border-slate-300 transition-colors group">
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                     <div className="flex items-start gap-3">
                                         <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
                                             {qIndex + 1}
                                         </div>
-                                        <p className="text-[0.95rem] font-bold text-slate-900 leading-snug pt-0.5">{q.text}</p>
+                                        <p className="text-[0.95rem] font-bold text-slate-900 leading-snug pt-0.5">{question.text}</p>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => startEditing(q)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all cursor-pointer">
+                                        <button onClick={() => startEditing(question)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all cursor-pointer">
                                             <Edit3 size={14} />
                                         </button>
-                                        <button onClick={() => handleDeleteQuestion(q.id)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-600 transition-all cursor-pointer">
+                                        <button onClick={() => void handleDeleteQuestion(question.id)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-600 transition-all cursor-pointer">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">
-                                    {q.options.map((opt, idx) => {
-                                        const isCorrect = q.correctOptionId === opt.id;
+                                    {question.options.map((option, idx) => {
+                                        const isCorrect = question.correctOptionId === option.id;
                                         return (
-                                            <div key={opt.id} className={cn(
+                                            <div key={option.id} className={cn(
                                                 "flex items-center gap-3 p-2.5 rounded-lg border",
                                                 isCorrect ? "bg-green-50 border-green-200" : "bg-slate-50 border-slate-100"
                                             )}>
@@ -199,7 +239,7 @@ export const AdminQuestionManager: React.FC = () => {
                                                     {String.fromCharCode(65 + idx)}
                                                 </div>
                                                 <span className={cn("text-xs font-medium", isCorrect ? "text-green-900" : "text-slate-600")}>
-                                                    {opt.text}
+                                                    {option.text}
                                                 </span>
                                             </div>
                                         );

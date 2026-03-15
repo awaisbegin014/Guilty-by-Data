@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils';
 export const QuestionPage: React.FC = () => {
     const { roundId, questionIndex } = useParams<{ roundId: string; questionIndex: string }>();
     const navigate = useNavigate();
-    const { roundsProgress, setAnswer, submitRound, rounds } = useAppStore();
+    const { roundsProgress, setAnswer, submitRound, rounds, isSubmitting, unlockedRounds, error, clearError } = useAppStore();
 
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+    const [submitError, setSubmitError] = useState('');
 
     const round = rounds.find(r => r.id === roundId);
     const qIndex = parseInt(questionIndex || '0', 10);
@@ -21,7 +22,7 @@ export const QuestionPage: React.FC = () => {
         return <div className="container p-20 text-center"><p className="case-label">Analysis Node Unavailable</p></div>;
     }
 
-    if (round.status === 'closed') {
+    if (!unlockedRounds.includes(round.id)) {
         navigate('/dashboard', { replace: true });
         return null;
     }
@@ -52,10 +53,17 @@ export const QuestionPage: React.FC = () => {
         else if (isFirstQuestion) navigate(`/round/${round.id}`);
     };
 
-    const handleFinalSubmit = () => {
+    const handleFinalSubmit = async () => {
         setShowSubmitModal(false);
-        submitRound(round.id);
-        navigate(`/round/${round.id}/submitted`);
+        setSubmitError('');
+        clearError();
+
+        try {
+            await submitRound(round.id);
+            navigate(`/round/${round.id}/submitted`);
+        } catch (submissionError) {
+            setSubmitError(submissionError instanceof Error ? submissionError.message : 'Submission failed.');
+        }
     };
 
     const answeredCount = Object.keys(progress?.answers || {}).length;
@@ -153,7 +161,7 @@ export const QuestionPage: React.FC = () => {
                     <div className="flex items-center gap-2.5">
                          <Info size={14} className="text-primary shrink-0" />
                          <p className="text-[0.55rem] text-muted-foreground font-black uppercase tracking-widest leading-tight">
-                            Protocol: findings are encrypted and auto-saved.
+                            Protocol: findings are stored locally until final submission.
                          </p>
                     </div>
                     <Button variant="primary" size="sm" onClick={handleNext} className="w-full sm:w-auto min-w-[180px] h-10 text-[0.7rem] tracking-widest uppercase">
@@ -212,13 +220,22 @@ export const QuestionPage: React.FC = () => {
                                 </button>
                                 <Button 
                                     variant="primary" 
-                                    onClick={handleFinalSubmit} 
+                                    onClick={() => void handleFinalSubmit()} 
+                                    disabled={isSubmitting}
                                     className="flex-1 h-14 bg-destructive text-white border-none"
                                 >
-                                    Execute Submission
+                                    {isSubmitting ? 'Submitting...' : 'Execute Submission'}
                                 </Button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {(submitError || error) && (
+                <div className="container max-w-[800px] mt-4">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                        {submitError || error}
                     </div>
                 </div>
             )}

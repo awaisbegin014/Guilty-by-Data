@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { ShieldCheck, User, KeyRound, AlertCircle } from 'lucide-react';
@@ -7,27 +7,34 @@ import { motion } from 'framer-motion';
 export const AdminLoginPage: React.FC = () => {
     const [adminId, setAdminId] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [localError, setLocalError] = useState('');
 
     const navigate = useNavigate();
-    const { setAdmin } = useAppStore();
+    const { loginAdmin, isBootstrapping, error, clearError } = useAppStore();
 
-    const handleLogin = (e: React.FormEvent) => {
+    useEffect(() => {
+        clearError();
+    }, [clearError]);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setIsLoading(true);
+        setLocalError('');
+        clearError();
 
-        setTimeout(() => {
-            if (adminId === 'guilty_by_data' && password === '17014130') {
-                setAdmin(true);
-                navigate('/admin/dashboard');
-            } else {
-                setError('Invalid credentials. Access denied.');
-                setIsLoading(false);
-            }
-        }, 600);
+        if (!adminId.trim() || !password.trim()) {
+            setLocalError('Please enter both your admin identifier and password.');
+            return;
+        }
+
+        try {
+            await loginAdmin(adminId, password);
+            navigate('/admin/dashboard');
+        } catch {
+            // Store error is already populated for the UI.
+        }
     };
+
+    const displayError = localError || error;
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
@@ -55,21 +62,21 @@ export const AdminLoginPage: React.FC = () => {
                     <div className="p-7">
                         <form onSubmit={handleLogin} className="flex flex-col gap-4">
                             {/* Error */}
-                            {error && (
+                            {displayError && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-red-300 text-[0.75rem] font-bold"
                                 >
                                     <AlertCircle size={14} className="shrink-0" />
-                                    <span>{error}</span>
+                                    <span>{displayError}</span>
                                 </motion.div>
                             )}
 
                             {/* Admin ID */}
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest">
-                                    Admin Identifier
+                                    Admin Email / Identifier
                                 </label>
                                 <div className="relative">
                                     <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none" />
@@ -77,9 +84,10 @@ export const AdminLoginPage: React.FC = () => {
                                         type="text"
                                         value={adminId}
                                         onChange={(e) => setAdminId(e.target.value)}
-                                        placeholder="Enter ID…"
+                                        placeholder="organizer@example.com"
                                         required
                                         autoFocus
+                                        autoComplete="username"
                                         className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-md text-slate-200 text-sm outline-none font-sans transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600 font-medium"
                                     />
                                 </div>
@@ -98,6 +106,7 @@ export const AdminLoginPage: React.FC = () => {
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="••••••••"
                                         required
+                                        autoComplete="current-password"
                                         className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-md text-slate-200 text-sm outline-none font-sans tracking-widest transition-colors duration-150 focus:border-slate-500 placeholder:text-slate-600"
                                     />
                                 </div>
@@ -106,10 +115,10 @@ export const AdminLoginPage: React.FC = () => {
                             {/* Submit */}
                             <button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isBootstrapping}
                                 className="mt-1 w-full py-2.5 bg-slate-50 text-slate-900 border-none rounded-md text-xs font-black uppercase tracking-widest cursor-pointer transition-all duration-150 hover:bg-white active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? 'Authenticating…' : 'Override Protocol'}
+                                {isBootstrapping ? 'Authenticating…' : 'Override Protocol'}
                             </button>
                         </form>
                     </div>

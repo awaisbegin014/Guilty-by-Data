@@ -1,6 +1,14 @@
 export interface Team {
   id: string;
   name: string;
+  username: string;
+  email?: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string | null;
 }
 
 export interface CompetitionConfig {
@@ -25,11 +33,14 @@ export interface Question {
   questionIndex: number;
   text: string;
   options: Option[];
-  correctOptionId: string;
+  correctOptionId?: string | null;
+  type?: 'mcq' | 'blank';
+  inputType?: 'int' | 'float' | 'string' | null;
 }
 
 export interface Round {
   id: string;
+  orderIndex: number;
   title: string;
   description: string;
   objective: string;
@@ -37,21 +48,24 @@ export interface Round {
   datasetTitle: string;
   datasetDescription: string;
   datasetLink?: string;
+  datasetVisible?: boolean;
+  datasetPassword?: string | null;
   documentation: {
     sectionTitle: string;
     content: string;
   }[];
-  status?: 'open' | 'closed';
+  status: 'draft' | 'open' | 'closed';
+  timerMinutes: number;
+  startsAt: string | null;
+  endsAt: string | null;
   questions: Question[];
 }
 
 export interface RoundProgress {
   roundId: string;
   status: 'locked' | 'available' | 'in_progress' | 'submitted';
-  timerStartedAt: number | null;
-  timeRemainingMs: number | null;
   answers: Record<string, string>; // questionId -> optionId
-  submittedAt: number | null;
+  submittedAt: string | null;
   docsVisited: boolean;
   datasetOpened: boolean;
 }
@@ -60,12 +74,23 @@ export interface LeaderboardEntry {
   rank: number;
   teamId: string;
   teamName: string;
-  points: number;
-  roundsCompleted: number;
-  latestSubmissionTime: number;
+  username: string;
+  round1Score: number;
+  round2Score: number;
+  round3Score: number;
+  totalScore: number;
+  updatedAt: string;
 }
 
 export interface AppSession {
   team: Team | null;
-  unlockedRounds: string[]; // array of roundIds
+  draftProgressByRound: Record<string, Pick<RoundProgress, 'answers' | 'docsVisited' | 'datasetOpened'>>;
+}
+
+export interface RoundSubmission {
+  id: string;
+  roundId: string;
+  submittedAt: string;
+  totalScore: number | null;
+  status: 'accepted' | 'rejected';
 }

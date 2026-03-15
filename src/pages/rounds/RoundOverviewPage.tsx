@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
@@ -9,15 +9,9 @@ import { Badge } from '../../components/ui/Badge';
 export const RoundOverviewPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
-    const { startRound, roundsProgress, rounds, unlockedRounds, markDatasetOpened } = useAppStore();
+    const { roundsProgress, rounds, unlockedRounds, markDatasetOpened } = useAppStore();
 
     const round = rounds.find(r => r.id === roundId);
-
-    useEffect(() => {
-        if (roundId && unlockedRounds.includes(roundId)) {
-            startRound(roundId);
-        }
-    }, [roundId, startRound, unlockedRounds]);
 
     if (!round) {
         return <div className="container p-20 text-center"><p className="case-label">Error: File Not Found</p></div>;
@@ -30,12 +24,17 @@ export const RoundOverviewPage: React.FC = () => {
         return null;
     }
 
+    if (!unlockedRounds.includes(round.id)) {
+        navigate('/dashboard', { replace: true });
+        return null;
+    }
+
     const handleDatasetAccess = () => {
         markDatasetOpened(round.id);
-        if (round.datasetLink) {
+        if (round.datasetVisible && round.datasetLink) {
             window.open(round.datasetLink, '_blank', 'noopener,noreferrer');
         } else {
-            alert('SYSTEM_MSG: No external dataset link configured.');
+            alert('SYSTEM_MSG: Dataset access is not currently available for this round.');
         }
     };
 

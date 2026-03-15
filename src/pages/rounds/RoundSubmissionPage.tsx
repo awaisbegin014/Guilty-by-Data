@@ -17,11 +17,6 @@ export const RoundSubmissionPage: React.FC = () => {
         return <div className="container p-20 text-center"><p className="case-label">Unauthorized Access: Submission Node Not Detected</p></div>;
     }
 
-    if (round.status === 'closed') {
-        navigate('/dashboard', { replace: true });
-        return null;
-    }
-
     const roundIndex = rounds.findIndex(r => r.id === round.id);
     const isFinalRound = roundIndex === rounds.length - 1;
     const isCompetitionComplete = isFinalRound && progress.status === 'submitted';

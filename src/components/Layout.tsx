@@ -1,15 +1,15 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { UserCircle, Trophy, LogOut, Shield, Database } from 'lucide-react';
+import { UserCircle, Trophy, LogOut, Database } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 export const Layout: React.FC = () => {
-    const { team, setTeam } = useAppStore();
+    const { team, logout } = useAppStore();
     const navigate = useNavigate();
     const location = useLocation();
 
-    const handleLogout = () => {
-        setTeam(null);
+    const handleLogout = async () => {
+        await logout();
         navigate('/');
     };
 
@@ -25,11 +25,11 @@ export const Layout: React.FC = () => {
                         className={`flex items-center gap-3 ${team ? 'cursor-pointer' : 'cursor-default'} group`}
                         onClick={() => team && navigate('/dashboard')}
                     >
-                        <div className="w-9 h-9 rounded-md bg-secondary border border-border flex items-center justify-center shadow-inner-glow transition-all group-hover:border-primary/50">
-                            <Shield size={18} className="text-primary" />
+                        <div className="w-9 h-9 rounded-md bg-secondary border border-border flex items-center justify-center shadow-inner-glow transition-all group-hover:border-primary/50 overflow-hidden">
+                            <img src="/logo.png" alt="Guilty By Data Logo" className="w-full h-full object-cover" />
                         </div>
                         <div>
-                            <div className="font-black text-base text-white leading-tight tracking-tighter uppercase">GbD Archive</div>
+                            <div className="font-black text-base text-white leading-tight tracking-tighter uppercase">Guilty By Data</div>
                             <div className="text-[0.55rem] text-muted-foreground tracking-[0.2em] uppercase font-bold flex items-center gap-1.5 font-mono">
                                 <Database size={9} />
                                 investigation portal
@@ -56,7 +56,7 @@ export const Layout: React.FC = () => {
                             </button>
 
                             <button
-                                onClick={handleLogout}
+                                onClick={() => void handleLogout()}
                                 title="Secure Logout"
                                 className="flex items-center p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-destructive/10 transition-colors"
                             >
@@ -85,7 +85,7 @@ export const Layout: React.FC = () => {
                                 </div>
                                 <div className="text-center md:text-right">
                                     <p className="text-[0.6rem] text-muted-foreground font-medium uppercase tracking-tight">
-                                        © {new Date().getFullYear()} Guilty by Data · Competitive Analytics Platform
+                                        © {new Date().getFullYear()} Guilty By Data · Competitive Analytics Platform
                                     </p>
                                 </div>
                             </div>

@@ -1,44 +1,40 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
-import { validTeams } from '../../data/mockData';
 import { Shield, Fingerprint, Key, AlertCircle, Database } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 
 export const TeamLoginPage: React.FC = () => {
-    const [teamName, setTeamName] = useState('');
+    const [teamId, setTeamId] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [localError, setLocalError] = useState('');
 
-    const { setTeam } = useAppStore();
+    const { loginTeam, isBootstrapping, error, clearError } = useAppStore();
     const navigate = useNavigate();
 
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+    useEffect(() => {
+        clearError();
+    }, [clearError]);
 
-        if (!teamName.trim() || !password.trim()) {
-            setError('CREDENTIAL_ERROR: Please enter both Team Name and Access Key.');
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLocalError('');
+        clearError();
+
+        if (!teamId.trim() || !password.trim()) {
+            setLocalError('CREDENTIAL_ERROR: Please enter both Team ID and Access Key.');
             return;
         }
 
-        setIsLoading(true);
-
-        setTimeout(() => {
-            setIsLoading(false);
-            const match = validTeams.find(
-                t => t.name.toLowerCase() === teamName.trim().toLowerCase() && t.password === password
-            );
-
-            if (match) {
-                setTeam({ id: match.id, name: match.name });
-                navigate('/dashboard');
-            } else {
-                setError('AUTH_FAILED: Invalid credentials. Unauthorized access attempt logged.');
-            }
-        }, 1000);
+        try {
+            await loginTeam(teamId, password);
+            navigate('/dashboard');
+        } catch {
+            // Store error is already populated for the UI.
+        }
     };
+
+    const displayError = localError || error;
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-background bg-analytical-grid">
@@ -72,10 +68,10 @@ export const TeamLoginPage: React.FC = () => {
                     <div className="p-5">
                         <form onSubmit={handleLogin} className="flex flex-col gap-3.5">
                             {/* Error Messaging */}
-                            {error && (
+                            {displayError && (
                                 <div className="flex items-start gap-2 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-[0.65rem] font-bold font-mono uppercase tracking-tight">
                                     <AlertCircle size={12} className="shrink-0" />
-                                    <span>{error}</span>
+                                    <span>{displayError}</span>
                                 </div>
                             )}
 
@@ -83,16 +79,16 @@ export const TeamLoginPage: React.FC = () => {
                             <div className="flex flex-col gap-1">
                                 <label className="case-label flex items-center gap-2 text-[0.55rem]">
                                     <Database size={10} className="text-primary" />
-                                    Team Designation
+                                    Team Identifier
                                 </label>
                                 <input
-                                    id="teamName"
+                                    id="teamId"
                                     type="text"
-                                    placeholder="TEAMID_ALPHA"
-                                    value={teamName}
-                                    onChange={(e) => setTeamName(e.target.value)}
+                                    placeholder="team-alpha"
+                                    value={teamId}
+                                    onChange={(e) => setTeamId(e.target.value)}
                                     autoFocus
-                                    autoComplete="off"
+                                    autoComplete="username"
                                     className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-md text-white text-xs font-bold font-mono tracking-wider focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/30"
                                 />
                             </div>
@@ -109,6 +105,7 @@ export const TeamLoginPage: React.FC = () => {
                                     placeholder="••••••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
+                                    autoComplete="current-password"
                                     className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-md text-white text-xs font-bold font-mono tracking-widest focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/30"
                                 />
                             </div>
@@ -116,10 +113,10 @@ export const TeamLoginPage: React.FC = () => {
                             {/* Authorization Submit */}
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isBootstrapping}
                                 className="mt-1 h-10 text-[0.7rem] uppercase tracking-widest"
                             >
-                                {isLoading ? (
+                                {isBootstrapping ? (
                                     <div className="flex items-center gap-2">
                                         <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                                         <span>Authorizing...</span>

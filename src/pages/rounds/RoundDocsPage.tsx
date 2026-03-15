@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, ShieldCheck, FileSearch, Notebook } from 'lucide
 export const RoundDocsPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
-    const { markDocsVisited, roundsProgress, rounds } = useAppStore();
+    const { markDocsVisited, roundsProgress, rounds, unlockedRounds } = useAppStore();
 
     const round = rounds.find(r => r.id === roundId);
     const progress = round ? roundsProgress[round.id] : undefined;
@@ -23,7 +23,7 @@ export const RoundDocsPage: React.FC = () => {
         return <div className="container p-20 text-center"><p className="case-label">Reference Material Not Found</p></div>;
     }
 
-    if (round.status === 'closed') {
+    if (!unlockedRounds.includes(round.id)) {
         navigate('/dashboard', { replace: true });
         return null;
     }

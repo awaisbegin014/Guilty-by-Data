@@ -9,41 +9,34 @@ interface TimerBannerProps {
 }
 
 export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
-    const { roundsProgress, updateTimeRemaining, submitRound } = useAppStore();
+    const { rounds, roundsProgress } = useAppStore();
     const progress = roundsProgress[roundId];
+    const round = rounds.find((item) => item.id === roundId);
     const navigate = useNavigate();
-
-    const [timeLeft, setTimeLeft] = useState<number | null>(progress?.timeRemainingMs || null);
+    const [now, setNow] = useState(() => Date.now());
+    const timeLeft = round?.endsAt ? Math.max(0, new Date(round.endsAt).getTime() - now) : null;
 
     useEffect(() => {
-        if (!progress || progress.status === 'submitted') return;
-        if (progress.timeRemainingMs === null) return;
-
-        if (timeLeft === null || Math.abs(progress.timeRemainingMs - timeLeft) > 6000) {
-            setTimeLeft(progress.timeRemainingMs);
+        if (!round?.endsAt || progress?.status === 'submitted') {
+            return;
         }
 
+        const endTime = new Date(round.endsAt).getTime();
+
         const interval = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev === null) return null;
-                const nextTime = Math.max(0, prev - 1000);
+            const nextTime = Math.max(0, endTime - Date.now());
+            setNow(Date.now());
 
-                if (nextTime % 5000 === 0 || nextTime <= 5000) {
-                    updateTimeRemaining(roundId, nextTime);
-                }
-
-                if (nextTime === 0) {
-                    clearInterval(interval);
-                    submitRound(roundId);
+            if (nextTime === 0 && progress?.status !== 'submitted') {
+                clearInterval(interval);
+                if (window.location.pathname.startsWith(`/round/${roundId}`)) {
                     navigate(`/round/${roundId}/submitted`);
                 }
-
-                return nextTime;
-            });
+            }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [roundId, progress, submitRound, updateTimeRemaining, navigate, timeLeft]);
+    }, [navigate, progress?.status, round?.endsAt, roundId]);
 
     if (progress?.status === 'submitted' || timeLeft === null) {
         return null;

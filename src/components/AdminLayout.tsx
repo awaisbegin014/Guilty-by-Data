@@ -7,10 +7,10 @@ import { cn } from '@/lib/utils';
 export const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { setAdmin } = useAppStore();
+    const { logout } = useAppStore();
 
-    const handleLogout = () => {
-        setAdmin(false);
+    const handleLogout = async () => {
+        await logout();
         navigate('/admin/login');
     };
 
@@ -27,11 +27,11 @@ export const AdminLayout: React.FC = () => {
             <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
                 <div className="container h-16 flex items-center justify-between">
                     <div className="flex items-center gap-8">
-                        <Link to="/admin/dashboard" className="flex items-center gap-2 no-underline group">
-                            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground">
-                                <Target size={20} />
+                        <Link to="/admin/dashboard" className="flex items-center gap-3 no-underline group">
+                            <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary-foreground overflow-hidden">
+                                <img src="/logo.png" alt="GBD Admin Logo" className="w-full h-full object-cover" />
                             </div>
-                            <span className="text-xl font-bold text-foreground">GBD Admin</span>
+                            <span className="text-xl font-bold text-foreground tracking-tight">Guilty By Data Admin</span>
                         </Link>
 
                         <nav className="hidden md:flex items-center gap-1">
@@ -58,7 +58,7 @@ export const AdminLayout: React.FC = () => {
 
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={handleLogout}
+                            onClick={() => void handleLogout()}
                             className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                             <LogOut size={16} />

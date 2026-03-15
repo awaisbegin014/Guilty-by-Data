@@ -4,19 +4,12 @@ import { useAppStore } from '../../store/useAppStore';
 import { Database, Activity, CheckSquare, AlertCircle } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-    const { rounds, roundsProgress, resetParticipantProgress } = useAppStore();
+    const { rounds } = useAppStore();
     const navigate = useNavigate();
 
     const totalRounds = rounds.length;
-    const activeInvestigations = Object.values(roundsProgress).filter(p => p.status === 'in_progress').length;
-    const completedInvestigations = Object.values(roundsProgress).filter(p => p.status === 'submitted').length;
-
-    const handleReset = () => {
-        if (window.confirm('Are you sure you want to reset all participant progress? This cannot be undone.')) {
-            resetParticipantProgress();
-            alert('Progress has been reset.');
-        }
-    };
+    const openRounds = rounds.filter((round) => round.status === 'open').length;
+    const totalQuestions = rounds.reduce((sum, round) => sum + round.questions.length, 0);
 
     return (
         <div className="flex flex-col gap-8">
@@ -37,16 +30,16 @@ export const AdminDashboardPage: React.FC = () => {
                 <div className="bg-white border border-border rounded-[14px] p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <Activity size={18} className="text-emerald-600" />
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Teams</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Open Rounds</span>
                     </div>
-                    <p className="text-3xl font-extrabold text-slate-900">{activeInvestigations}</p>
+                    <p className="text-3xl font-extrabold text-slate-900">{openRounds}</p>
                 </div>
                 <div className="bg-white border border-border rounded-[14px] p-6">
                     <div className="flex items-center gap-3 mb-4">
                         <CheckSquare size={18} className="text-violet-600" />
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Submissions</span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Questions</span>
                     </div>
-                    <p className="text-3xl font-extrabold text-slate-900">{completedInvestigations}</p>
+                    <p className="text-3xl font-extrabold text-slate-900">{totalQuestions}</p>
                 </div>
             </div>
 
@@ -74,15 +67,12 @@ export const AdminDashboardPage: React.FC = () => {
             <div className="mt-8 bg-red-50 border border-red-100 rounded-[14px] p-6">
                 <div className="flex items-center gap-3 mb-4">
                     <AlertCircle size={20} className="text-red-600" />
-                    <h3 className="text-lg font-bold text-red-900">Danger Zone</h3>
+                    <h3 className="text-lg font-bold text-red-900">Admin Notes</h3>
                 </div>
-                <p className="text-sm text-red-700 mb-6">Resetting participant progress will clear all current answers and scores. This cannot be undone.</p>
-                <button
-                    onClick={handleReset}
-                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 transition-colors cursor-pointer"
-                >
-                    Reset All Progress
-                </button>
+                <p className="text-sm text-red-700">
+                    Participant submission reset is intentionally not exposed from the client now that Supabase is the system of record.
+                    Use secure backend tooling for destructive operations.
+                </p>
             </div>
         </div>
     );

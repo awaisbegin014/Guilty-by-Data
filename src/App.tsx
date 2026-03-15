@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { Layout } from './components/Layout';
@@ -41,66 +41,89 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const AppRoutes: React.FC = () => {
+  const { authReady, bootstrapApp } = useAppStore();
+
+  useEffect(() => {
+    void bootstrapApp();
+  }, [bootstrapApp]);
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground bg-analytical-grid">
+        <div className="dossier-card rounded-xl px-8 py-6 text-center">
+          <p className="case-label mb-2">System Bootstrap</p>
+          <h1 className="text-xl font-black text-white uppercase tracking-widest">Restoring Session</h1>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Routes>
+
+      {/* ── ADMIN LOGIN — standalone, no shell ── */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+
+      {/* ── ADMIN PANEL — AdminLayout shell ── */}
+      <Route path="/admin" element={
+        <AdminRoute>
+          <AdminLayout />
+        </AdminRoute>
+      }>
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
+        <Route path="rounds" element={<AdminRoundManager />} />
+        <Route path="questions" element={<AdminQuestionManager />} />
+      </Route>
+
+      {/* ── PARTICIPANT AREA — Layout shell ── */}
+      <Route element={<Layout />}>
+        <Route path="/" element={
+          <PublicRoute>
+            <TeamLoginPage />
+          </PublicRoute>
+        } />
+
+        <Route path="/dashboard" element={
+          <PrivateRoute><DashboardPage /></PrivateRoute>
+        } />
+
+        <Route path="/leaderboard" element={
+          <PrivateRoute><LeaderboardPage /></PrivateRoute>
+        } />
+
+        <Route path="/round/:roundId" element={
+          <PrivateRoute><RoundOverviewPage /></PrivateRoute>
+        } />
+
+        <Route path="/round/:roundId/docs" element={
+          <PrivateRoute><RoundDocsPage /></PrivateRoute>
+        } />
+
+        <Route path="/round/:roundId/q/:questionIndex" element={
+          <PrivateRoute><QuestionPage /></PrivateRoute>
+        } />
+
+        <Route path="/round/:roundId/submitted" element={
+          <PrivateRoute><RoundSubmissionPage /></PrivateRoute>
+        } />
+
+        <Route path="/complete" element={
+          <PrivateRoute><CompetitionCompletePage /></PrivateRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+
+    </Routes>
+  );
+};
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-
-        {/* ── ADMIN LOGIN — standalone, no shell ── */}
-        <Route path="/admin/login" element={<AdminLoginPage />} />
-
-        {/* ── ADMIN PANEL — AdminLayout shell ── */}
-        <Route path="/admin" element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="rounds" element={<AdminRoundManager />} />
-          <Route path="questions" element={<AdminQuestionManager />} />
-        </Route>
-
-        {/* ── PARTICIPANT AREA — Layout shell ── */}
-        <Route element={<Layout />}>
-          <Route path="/" element={
-            <PublicRoute>
-              <TeamLoginPage />
-            </PublicRoute>
-          } />
-
-          <Route path="/dashboard" element={
-            <PrivateRoute><DashboardPage /></PrivateRoute>
-          } />
-
-          <Route path="/leaderboard" element={
-            <PrivateRoute><LeaderboardPage /></PrivateRoute>
-          } />
-
-          <Route path="/round/:roundId" element={
-            <PrivateRoute><RoundOverviewPage /></PrivateRoute>
-          } />
-
-          <Route path="/round/:roundId/docs" element={
-            <PrivateRoute><RoundDocsPage /></PrivateRoute>
-          } />
-
-          <Route path="/round/:roundId/q/:questionIndex" element={
-            <PrivateRoute><QuestionPage /></PrivateRoute>
-          } />
-
-          <Route path="/round/:roundId/submitted" element={
-            <PrivateRoute><RoundSubmissionPage /></PrivateRoute>
-          } />
-
-          <Route path="/complete" element={
-            <PrivateRoute><CompetitionCompletePage /></PrivateRoute>
-          } />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

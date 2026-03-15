@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
-import { mockLeaderboard } from '../../data/mockData';
 import { Button } from '../../components/ui/Button';
-import { Trophy, ArrowLeft, Clock, Target, Shield } from 'lucide-react';
+import { Trophy, ArrowLeft, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const formatTimeAgo = (timestamp: number) => {
-    const diff = Date.now() - timestamp;
+const formatTimeAgo = (timestamp: string) => {
+    const diff = Date.now() - new Date(timestamp).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
@@ -16,7 +15,7 @@ const formatTimeAgo = (timestamp: number) => {
 };
 
 export const LeaderboardPage: React.FC = () => {
-    const { team } = useAppStore();
+    const { team, leaderboard } = useAppStore();
     const navigate = useNavigate();
 
     return (
@@ -48,8 +47,8 @@ export const LeaderboardPage: React.FC = () => {
                 {/* Standings Table/List */}
                 <div className="dossier-card rounded-2xl overflow-hidden shadow-2xl">
                     {/* Header Columns */}
-                    <div className="grid grid-cols-[80px_1fr_120px_140px_140px] bg-slate-900/60 border-b border-border px-8 py-5">
-                        {['Rank', 'Designation', 'Integrity Score', 'Cases Resolved', 'Last Signal'].map((h, i) => (
+                    <div className="grid grid-cols-[80px_1fr_100px_100px_100px_120px_120px] bg-slate-900/60 border-b border-border px-8 py-5">
+                        {['Rank', 'Designation', 'R1', 'R2', 'R3', 'Total', 'Updated'].map((h, i) => (
                             <div key={i} className={cn(
                                 'text-[0.6rem] font-black text-muted-foreground uppercase tracking-[0.2em] font-mono',
                                 i >= 2 && 'text-center'
@@ -61,7 +60,7 @@ export const LeaderboardPage: React.FC = () => {
 
                     {/* Registry Rows */}
                     <div className="divide-y divide-border">
-                        {mockLeaderboard.map((entry) => {
+                        {leaderboard.map((entry) => {
                             const isCurrentTeam = team?.id === entry.teamId || team?.name === entry.teamName;
                             const isTop3 = entry.rank <= 3;
 
@@ -69,7 +68,7 @@ export const LeaderboardPage: React.FC = () => {
                                 <div
                                     key={entry.teamId}
                                     className={cn(
-                                        'grid grid-cols-[80px_1fr_120px_140px_140px] px-8 py-6 items-center transition-all group',
+                                        'grid grid-cols-[80px_1fr_100px_100px_100px_120px_120px] px-8 py-6 items-center transition-all group',
                                         isCurrentTeam ? 'bg-primary/5' : 'hover:bg-slate-900/30'
                                     )}
                                 >
@@ -102,37 +101,22 @@ export const LeaderboardPage: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    {/* Score */}
-                                    <div className="text-center">
-                                        <span className={cn(
-                                            'text-xl font-black font-mono tracking-tighter',
-                                            isTop3 ? 'text-white' : 'text-slate-300'
-                                        )}>
-                                            {entry.points.toLocaleString()}
-                                        </span>
-                                    </div>
-
-                                    {/* Solved Status */}
-                                    <div className="flex justify-center">
-                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-secondary/30 border border-border">
-                                            <Target size={14} className="text-primary/60" />
-                                            <span className="text-xs font-black font-mono text-slate-300">
-                                                {entry.roundsCompleted}/03
+                                    {[entry.round1Score, entry.round2Score, entry.round3Score, entry.totalScore].map((score, idx) => (
+                                        <div key={`${entry.teamId}-${idx}`} className="text-center">
+                                            <span className={cn(
+                                                idx === 3 ? 'text-xl' : 'text-base',
+                                                'font-black font-mono tracking-tighter',
+                                                isTop3 ? 'text-white' : 'text-slate-300'
+                                            )}>
+                                                {score.toLocaleString()}
                                             </span>
                                         </div>
-                                    </div>
+                                    ))}
 
-                                    {/* Last Active Timestamp */}
                                     <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-1.5 text-[0.65rem] font-mono font-black text-muted-foreground uppercase tracking-widest">
                                             <Clock size={12} />
-                                            <span>{formatTimeAgo(entry.latestSubmissionTime)}</span>
-                                        </div>
-                                        <div className="w-24 h-1 bg-secondary rounded-full overflow-hidden">
-                                            <div 
-                                                className="h-full bg-primary/40" 
-                                                style={{ width: `${(entry.roundsCompleted / 3) * 100}%` }} 
-                                            />
+                                            <span>{formatTimeAgo(entry.updatedAt)}</span>
                                         </div>
                                     </div>
                                 </div>

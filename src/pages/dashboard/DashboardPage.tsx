@@ -11,8 +11,10 @@ export const DashboardPage: React.FC = () => {
     const { unlockedRounds, roundsProgress, rounds } = useAppStore();
 
     const completedRounds = Object.values(roundsProgress).filter((p) => p.status === 'submitted').length;
-    const activeRoundProgress = Object.values(roundsProgress).find((p) => p.status === 'in_progress');
-    const activeRound = activeRoundProgress ? rounds.find(r => r.id === activeRoundProgress.roundId) : null;
+    const nextAvailableRound = rounds.find((round) => {
+        const progress = roundsProgress[round.id];
+        return unlockedRounds.includes(round.id) && progress?.status !== 'submitted';
+    });
 
     return (
         <div className="pt-4 pb-20">
@@ -35,7 +37,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="flex flex-col gap-10">
                     
                     {/* Active Jump-Back (Conditional) */}
-                    {activeRound && (
+                    {nextAvailableRound && (
                         <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 flex items-center justify-between animate-pulse-subtle">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
@@ -44,12 +46,12 @@ export const DashboardPage: React.FC = () => {
                                 <div>
                                     <h3 className="text-sm font-black text-white uppercase tracking-tight">Active Investigation Detected</h3>
                                     <p className="text-[0.6rem] text-muted-foreground font-black font-mono uppercase tracking-widest mt-0.5">
-                                        Round: {activeRound.title} // Timer Active
+                                        Round: {nextAvailableRound.title} // Ready For Review
                                     </p>
                                 </div>
                             </div>
                             <Button 
-                                onClick={() => navigate(`/round/${activeRound.id}`)}
+                                onClick={() => navigate(`/round/${nextAvailableRound.id}`)}
                                 variant="primary" 
                                 size="sm" 
                                 className="h-9 px-6 text-[0.65rem] font-black tracking-widest uppercase"

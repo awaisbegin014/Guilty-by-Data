@@ -1,214 +1,528 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Team, RoundProgress, Round } from '../types';
-import { mockRounds } from '../data/mockData';
+import {
+  deleteQuestion as deleteQuestionRequest,
+  fetchAdminRounds,
+  fetchLeaderboard,
+  fetchParticipantRounds,
+  fetchTeamSubmissions,
+  resolveSession,
+  saveQuestion as saveQuestionRequest,
+  signInAdmin,
+  signInTeam,
+  signOut as signOutRequest,
+  submitRound as submitRoundRequest,
+  updateRound as updateRoundRequest,
+} from '../lib/appApi';
 import { competitionConfig } from '../config/competitionConfig';
+import type {
+  AdminUser,
+  LeaderboardEntry,
+  Question,
+  Round,
+  RoundProgress,
+  RoundSubmission,
+  Team,
+} from '../types';
+
+interface DraftRoundProgress {
+  answers: Record<string, string>;
+  docsVisited: boolean;
+  datasetOpened: boolean;
+}
 
 interface AppState {
-    // Auth & Session
-    team: Team | null;
-    setTeam: (team: Team | null) => void;
-    isAdmin: boolean;
-    setAdmin: (isAdmin: boolean) => void;
+  authReady: boolean;
+  isBootstrapping: boolean;
+  isSubmitting: boolean;
+  error: string | null;
+  team: Team | null;
+  admin: AdminUser | null;
+  isAdmin: boolean;
+  rounds: Round[];
+  leaderboard: LeaderboardEntry[];
+  unlockedRounds: string[];
+  roundsProgress: Record<string, RoundProgress>;
+  submissionsByRound: Record<string, RoundSubmission>;
+  draftProgressByRound: Record<string, DraftRoundProgress>;
+  bootstrapApp: () => Promise<void>;
+  loginTeam: (identifier: string, password: string) => Promise<void>;
+  loginAdmin: (identifier: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshParticipantData: () => Promise<void>;
+  refreshAdminData: () => Promise<void>;
+  refreshLeaderboard: () => Promise<void>;
+  setAnswer: (roundId: string, questionId: string, optionId: string) => void;
+  markDocsVisited: (roundId: string) => void;
+  markDatasetOpened: (roundId: string) => void;
+  submitRound: (roundId: string) => Promise<void>;
+  updateRound: (roundId: string, updates: Partial<Round>) => Promise<void>;
+  saveQuestion: (roundId: string, question: Question) => Promise<void>;
+  deleteQuestion: (questionId: string) => Promise<void>;
+  clearError: () => void;
+  resetLocalDrafts: () => void;
+}
 
-    // Competition Data (Source of Truth)
-    rounds: Round[];
-    updateRound: (roundId: string, updates: Partial<Round>) => void;
+function isRoundCurrentlyActive(round: Round) {
+  if (round.status !== 'open') {
+    return false;
+  }
 
-    // Progress & Game State
-    unlockedRounds: string[];
-    roundsProgress: Record<string, RoundProgress>;
+  const now = Date.now();
+  const startsAt = round.startsAt ? new Date(round.startsAt).getTime() : null;
+  const endsAt = round.endsAt ? new Date(round.endsAt).getTime() : null;
 
-    // Actions
-    unlockNextRound: () => void;
-    startRound: (roundId: string) => void;
-    submitRound: (roundId: string) => void;
-    setAnswer: (roundId: string, questionId: string, optionId: string) => void;
-    markDocsVisited: (roundId: string) => void;
-    markDatasetOpened: (roundId: string) => void;
-    updateTimeRemaining: (roundId: string, timeMs: number) => void;
-    extendRoundTimer: (roundId: string, minutes: number) => void;
+  if (startsAt && now < startsAt) {
+    return false;
+  }
 
-    // Util
-    resetParticipantProgress: () => void;
-    resetState: () => void;
+  if (endsAt && now > endsAt) {
+    return false;
+  }
+
+  return true;
+}
+
+function buildParticipantState(
+  rounds: Round[],
+  drafts: Record<string, DraftRoundProgress>,
+  submissionsByRound: Record<string, RoundSubmission>,
+) {
+  const sortedRounds = rounds.slice().sort((left, right) => left.orderIndex - right.orderIndex);
+  const unlockedRounds: string[] = [];
+  const roundsProgress: Record<string, RoundProgress> = {};
+  let previousRoundsSubmitted = true;
+
+  for (const round of sortedRounds) {
+    const draft = drafts[round.id] ?? {
+      answers: {},
+      docsVisited: false,
+      datasetOpened: false,
+    };
+    const submission = submissionsByRound[round.id];
+    const active = isRoundCurrentlyActive(round);
+    const sequentiallyAvailable = !competitionConfig.sequentialRoundUnlock || previousRoundsSubmitted;
+    const unlocked = Boolean(submission) || (active && sequentiallyAvailable);
+
+    if (unlocked) {
+      unlockedRounds.push(round.id);
+    }
+
+    roundsProgress[round.id] = {
+      roundId: round.id,
+      status: submission
+        ? 'submitted'
+        : unlocked
+          ? Object.keys(draft.answers).length > 0 || draft.docsVisited || draft.datasetOpened
+            ? 'in_progress'
+            : 'available'
+          : 'locked',
+      answers: draft.answers,
+      submittedAt: submission?.submittedAt ?? null,
+      docsVisited: draft.docsVisited,
+      datasetOpened: draft.datasetOpened,
+    };
+
+    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
+  }
+
+  return {
+    unlockedRounds,
+    roundsProgress,
+  };
+}
+
+function withParticipantState(
+  state: Pick<AppState, 'rounds' | 'draftProgressByRound' | 'submissionsByRound'>,
+) {
+  return buildParticipantState(state.rounds, state.draftProgressByRound, state.submissionsByRound);
+}
+
+async function loadParticipantBundle(team: Team) {
+  const [rounds, submissionsByRound, leaderboard] = await Promise.all([
+    fetchParticipantRounds(),
+    fetchTeamSubmissions(team.id),
+    fetchLeaderboard(),
+  ]);
+
+  return {
+    rounds,
+    submissionsByRound,
+    leaderboard,
+  };
 }
 
 export const useAppStore = create<AppState>()(
-    persist(
-        (set, get) => ({
-            team: null,
-            setTeam: (team) => set({ team }),
-            isAdmin: false,
-            setAdmin: (isAdmin) => set({ isAdmin }),
+  persist(
+    (set, get) => ({
+      authReady: false,
+      isBootstrapping: false,
+      isSubmitting: false,
+      error: null,
+      team: null,
+      admin: null,
+      isAdmin: false,
+      rounds: [],
+      leaderboard: [],
+      unlockedRounds: [],
+      roundsProgress: {},
+      submissionsByRound: {},
+      draftProgressByRound: {},
 
-            rounds: mockRounds,
-            updateRound: (roundId, updates) => {
-                set((state) => ({
-                    rounds: state.rounds.map((r) =>
-                        r.id === roundId ? { ...r, ...updates } : r
-                    )
-                }));
-            },
-
-            unlockedRounds: [mockRounds[0].id], // Round 1 is unlocked initially
-            roundsProgress: {},
-
-            unlockNextRound: () => {
-                set((state) => {
-                    const rounds = state.unlockedRounds;
-                    const currentMax = rounds.length;
-                    if (currentMax < competitionConfig.totalRounds) {
-                        return {
-                            unlockedRounds: [...rounds, mockRounds[currentMax].id]
-                        };
-                    }
-                    return state;
-                });
-            },
-
-            startRound: (roundId) => {
-                set((state) => {
-                    const existing = state.roundsProgress[roundId];
-                    if (existing && existing.timerStartedAt) return state; // Already started
-
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: {
-                                roundId,
-                                status: 'in_progress',
-                                timerStartedAt: Date.now(),
-                                timeRemainingMs: existing?.timeRemainingMs ?? (competitionConfig.timerMinutesPerRound * 60 * 1000),
-                                answers: existing?.answers || {},
-                                submittedAt: null,
-                                docsVisited: existing?.docsVisited || false,
-                                datasetOpened: existing?.datasetOpened || false,
-                            }
-                        }
-                    };
-                });
-            },
-
-            submitRound: (roundId) => {
-                set((state) => {
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress) return state;
-
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: {
-                                ...progress,
-                                status: 'submitted',
-                                submittedAt: Date.now(),
-                            }
-                        }
-                    };
-                });
-
-                if (competitionConfig.sequentialRoundUnlock) {
-                    get().unlockNextRound();
-                }
-            },
-
-            setAnswer: (roundId, questionId, optionId) => {
-                set((state) => {
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress || progress.status === 'submitted') return state;
-
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: {
-                                ...progress,
-                                answers: {
-                                    ...progress.answers,
-                                    [questionId]: optionId
-                                }
-                            }
-                        }
-                    };
-                });
-            },
-
-            markDocsVisited: (roundId) => {
-                set((state) => {
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress) return state;
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: { ...progress, docsVisited: true }
-                        }
-                    };
-                });
-            },
-
-            markDatasetOpened: (roundId) => {
-                set((state) => {
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress) return state;
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: { ...progress, datasetOpened: true }
-                        }
-                    };
-                });
-            },
-
-            updateTimeRemaining: (roundId, timeMs) => {
-                set((state) => {
-                    if (timeMs < 0) return state;
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress) return state;
-
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: { ...progress, timeRemainingMs: timeMs }
-                        }
-                    };
-                });
-            },
-
-            extendRoundTimer: (roundId, minutes) => {
-                set((state) => {
-                    const progress = state.roundsProgress[roundId];
-                    if (!progress || progress.timeRemainingMs === null) return state;
-
-                    const addedMs = minutes * 60 * 1000;
-                    const newTime = Math.max(0, progress.timeRemainingMs + addedMs);
-
-                    return {
-                        roundsProgress: {
-                            ...state.roundsProgress,
-                            [roundId]: { ...progress, timeRemainingMs: newTime }
-                        }
-                    };
-                });
-            },
-
-            resetParticipantProgress: () => {
-                set((state) => ({
-                    roundsProgress: {},
-                    unlockedRounds: state.rounds.length > 0 ? [state.rounds[0].id] : []
-                }));
-            },
-
-            resetState: () => {
-                set({
-                    team: null,
-                    isAdmin: false,
-                    unlockedRounds: [mockRounds[0].id],
-                    roundsProgress: {},
-                    rounds: mockRounds, // Reset rounds back to initial mock data
-                });
-            }
-        }),
-        {
-            name: 'guilty-by-data-storage', // key in localStorage
+      bootstrapApp: async () => {
+        if (get().isBootstrapping) {
+          return;
         }
-    )
+
+        set({
+          isBootstrapping: true,
+          error: null,
+        });
+
+        try {
+          const session = await resolveSession();
+
+          if (session.role === 'team' && session.team) {
+            const participantBundle = await loadParticipantBundle(session.team);
+            set((state) => ({
+              authReady: true,
+              isBootstrapping: false,
+              team: session.team,
+              admin: null,
+              isAdmin: false,
+              rounds: participantBundle.rounds,
+              leaderboard: participantBundle.leaderboard,
+              submissionsByRound: participantBundle.submissionsByRound,
+              ...buildParticipantState(
+                participantBundle.rounds,
+                state.draftProgressByRound,
+                participantBundle.submissionsByRound,
+              ),
+            }));
+            return;
+          }
+
+          if (session.role === 'admin' && session.admin) {
+            const rounds = await fetchAdminRounds();
+            set({
+              authReady: true,
+              isBootstrapping: false,
+              team: null,
+              admin: session.admin,
+              isAdmin: true,
+              rounds,
+              leaderboard: [],
+              submissionsByRound: {},
+              unlockedRounds: [],
+              roundsProgress: {},
+            });
+            return;
+          }
+
+          set({
+            authReady: true,
+            isBootstrapping: false,
+            team: null,
+            admin: null,
+            isAdmin: false,
+            rounds: [],
+            leaderboard: [],
+            submissionsByRound: {},
+            unlockedRounds: [],
+            roundsProgress: {},
+          });
+        } catch (error) {
+          set({
+            authReady: true,
+            isBootstrapping: false,
+            error: error instanceof Error ? error.message : 'Unable to bootstrap the app session.',
+            team: null,
+            admin: null,
+            isAdmin: false,
+            rounds: [],
+            leaderboard: [],
+            submissionsByRound: {},
+            unlockedRounds: [],
+            roundsProgress: {},
+          });
+        }
+      },
+
+      loginTeam: async (identifier, password) => {
+        set({
+          isBootstrapping: true,
+          error: null,
+        });
+
+        try {
+          const team = await signInTeam(identifier, password);
+          const participantBundle = await loadParticipantBundle(team);
+
+          set((state) => ({
+            authReady: true,
+            isBootstrapping: false,
+            team,
+            admin: null,
+            isAdmin: false,
+            rounds: participantBundle.rounds,
+            leaderboard: participantBundle.leaderboard,
+            submissionsByRound: participantBundle.submissionsByRound,
+            ...buildParticipantState(
+              participantBundle.rounds,
+              state.draftProgressByRound,
+              participantBundle.submissionsByRound,
+            ),
+          }));
+        } catch (error) {
+          set({
+            isBootstrapping: false,
+            error: error instanceof Error ? error.message : 'Team login failed.',
+          });
+          throw error;
+        }
+      },
+
+      loginAdmin: async (identifier, password) => {
+        set({
+          isBootstrapping: true,
+          error: null,
+        });
+
+        try {
+          const admin = await signInAdmin(identifier, password);
+          const rounds = await fetchAdminRounds();
+
+          set({
+            authReady: true,
+            isBootstrapping: false,
+            team: null,
+            admin,
+            isAdmin: true,
+            rounds,
+            leaderboard: [],
+            submissionsByRound: {},
+            unlockedRounds: [],
+            roundsProgress: {},
+          });
+        } catch (error) {
+          set({
+            isBootstrapping: false,
+            error: error instanceof Error ? error.message : 'Admin login failed.',
+          });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        await signOutRequest();
+        set({
+          authReady: true,
+          error: null,
+          team: null,
+          admin: null,
+          isAdmin: false,
+          rounds: [],
+          leaderboard: [],
+          unlockedRounds: [],
+          roundsProgress: {},
+          submissionsByRound: {},
+          draftProgressByRound: {},
+        });
+      },
+
+      refreshParticipantData: async () => {
+        const team = get().team;
+        if (!team) {
+          return;
+        }
+
+        const participantBundle = await loadParticipantBundle(team);
+        set((state) => ({
+          rounds: participantBundle.rounds,
+          leaderboard: participantBundle.leaderboard,
+          submissionsByRound: participantBundle.submissionsByRound,
+          ...buildParticipantState(
+            participantBundle.rounds,
+            state.draftProgressByRound,
+            participantBundle.submissionsByRound,
+          ),
+        }));
+      },
+
+      refreshAdminData: async () => {
+        const rounds = await fetchAdminRounds();
+        set({ rounds });
+      },
+
+      refreshLeaderboard: async () => {
+        const leaderboard = await fetchLeaderboard();
+        set({ leaderboard });
+      },
+
+      setAnswer: (roundId, questionId, optionId) => {
+        set((state) => {
+          const existing = state.draftProgressByRound[roundId] ?? {
+            answers: {},
+            docsVisited: false,
+            datasetOpened: false,
+          };
+
+          const draftProgressByRound = {
+            ...state.draftProgressByRound,
+            [roundId]: {
+              ...existing,
+              answers: {
+                ...existing.answers,
+                [questionId]: optionId,
+              },
+            },
+          };
+
+          return {
+            draftProgressByRound,
+            ...buildParticipantState(state.rounds, draftProgressByRound, state.submissionsByRound),
+          };
+        });
+      },
+
+      markDocsVisited: (roundId) => {
+        set((state) => {
+          const existing = state.draftProgressByRound[roundId] ?? {
+            answers: {},
+            docsVisited: false,
+            datasetOpened: false,
+          };
+          const draftProgressByRound = {
+            ...state.draftProgressByRound,
+            [roundId]: {
+              ...existing,
+              docsVisited: true,
+            },
+          };
+
+          return {
+            draftProgressByRound,
+            ...buildParticipantState(state.rounds, draftProgressByRound, state.submissionsByRound),
+          };
+        });
+      },
+
+      markDatasetOpened: (roundId) => {
+        set((state) => {
+          const existing = state.draftProgressByRound[roundId] ?? {
+            answers: {},
+            docsVisited: false,
+            datasetOpened: false,
+          };
+          const draftProgressByRound = {
+            ...state.draftProgressByRound,
+            [roundId]: {
+              ...existing,
+              datasetOpened: true,
+            },
+          };
+
+          return {
+            draftProgressByRound,
+            ...buildParticipantState(state.rounds, draftProgressByRound, state.submissionsByRound),
+          };
+        });
+      },
+
+      submitRound: async (roundId) => {
+        const progress = get().roundsProgress[roundId];
+        if (!progress) {
+          return;
+        }
+
+        set({
+          isSubmitting: true,
+          error: null,
+        });
+
+        try {
+          await submitRoundRequest(roundId, progress.answers);
+
+          set((state) => {
+            const nextDrafts = { ...state.draftProgressByRound };
+            delete nextDrafts[roundId];
+
+            return {
+              draftProgressByRound: nextDrafts,
+            };
+          });
+
+          await get().refreshParticipantData();
+          set({ isSubmitting: false });
+        } catch (error) {
+          set({
+            isSubmitting: false,
+            error: error instanceof Error ? error.message : 'Round submission failed.',
+          });
+          throw error;
+        }
+      },
+
+      updateRound: async (roundId, updates) => {
+        set({ error: null });
+
+        try {
+          await updateRoundRequest(roundId, updates);
+          await get().refreshAdminData();
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Round update failed.',
+          });
+          throw error;
+        }
+      },
+
+      saveQuestion: async (roundId, question) => {
+        set({ error: null });
+
+        try {
+          await saveQuestionRequest(roundId, question);
+          await get().refreshAdminData();
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Question save failed.',
+          });
+          throw error;
+        }
+      },
+
+      deleteQuestion: async (questionId) => {
+        set({ error: null });
+
+        try {
+          await deleteQuestionRequest(questionId);
+          await get().refreshAdminData();
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Question deletion failed.',
+          });
+          throw error;
+        }
+      },
+
+      clearError: () => set({ error: null }),
+
+      resetLocalDrafts: () => {
+        set((state) => ({
+          draftProgressByRound: {},
+          ...withParticipantState({
+            rounds: state.rounds,
+            draftProgressByRound: {},
+            submissionsByRound: state.submissionsByRound,
+          }),
+        }));
+      },
+    }),
+    {
+      name: 'guilty-by-data-storage',
+      partialize: (state) => ({
+        draftProgressByRound: state.draftProgressByRound,
+      }),
+    },
+  ),
 );

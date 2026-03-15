@@ -5,8 +5,9 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export const AdminRoundManager: React.FC = () => {
-    const { rounds, updateRound } = useAppStore();
+    const { rounds, updateRound, error } = useAppStore();
     const [selectedRoundId, setSelectedRoundId] = useState<string>(rounds[0]?.id || '');
+    const [isSaving, setIsSaving] = useState(false);
 
     const [isEditingLink, setIsEditingLink] = useState(false);
     const [datasetLink, setDatasetLink] = useState('');
@@ -15,8 +16,24 @@ export const AdminRoundManager: React.FC = () => {
     const [editTitle, setEditTitle] = useState('');
     const [editCaseBrief, setEditCaseBrief] = useState('');
     const [editObjective, setEditObjective] = useState('');
+    const [editTimerMinutes, setEditTimerMinutes] = useState('30');
+    const [editStartsAt, setEditStartsAt] = useState('');
+    const [editEndsAt, setEditEndsAt] = useState('');
 
-    const activeRound = rounds.find(r => r.id === selectedRoundId);
+    const resolvedSelectedRoundId = selectedRoundId || rounds[0]?.id || '';
+    const activeRound = rounds.find(r => r.id === resolvedSelectedRoundId) ?? rounds[0];
+
+    const toDateTimeInput = (value: string | null) => {
+        if (!value) return '';
+        const date = new Date(value);
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - offset * 60000);
+        return localDate.toISOString().slice(0, 16);
+    };
+
+    const toIsoDateTime = (value: string) => {
+        return value ? new Date(value).toISOString() : null;
+    };
 
     const handleSelectRound = (id: string) => {
         setSelectedRoundId(id);
@@ -28,7 +45,15 @@ export const AdminRoundManager: React.FC = () => {
         if (activeRound) { setDatasetLink(activeRound.datasetLink || ''); setIsEditingLink(true); }
     };
     const handleSaveLink = () => {
-        if (activeRound) { updateRound(activeRound.id, { datasetLink }); setIsEditingLink(false); }
+        if (activeRound) {
+            void updateRound(activeRound.id, {
+                datasetLink,
+                datasetTitle: activeRound.datasetTitle,
+                datasetDescription: activeRound.datasetDescription,
+                datasetVisible: Boolean(datasetLink),
+            });
+            setIsEditingLink(false);
+        }
     };
 
     const handleEditContentClick = () => {
@@ -36,19 +61,39 @@ export const AdminRoundManager: React.FC = () => {
             setEditTitle(activeRound.title);
             setEditCaseBrief(activeRound.caseBrief);
             setEditObjective(activeRound.objective);
+            setEditTimerMinutes(String(activeRound.timerMinutes));
+            setEditStartsAt(toDateTimeInput(activeRound.startsAt));
+            setEditEndsAt(toDateTimeInput(activeRound.endsAt));
             setIsEditingContent(true);
         }
     };
-    const handleSaveContent = () => {
+    const handleSaveContent = async () => {
         if (activeRound) {
-            updateRound(activeRound.id, { title: editTitle, caseBrief: editCaseBrief, objective: editObjective });
-            setIsEditingContent(false);
+            setIsSaving(true);
+            try {
+                await updateRound(activeRound.id, {
+                    title: editTitle,
+                    caseBrief: editCaseBrief,
+                    objective: editObjective,
+                    timerMinutes: Number(editTimerMinutes) || activeRound.timerMinutes,
+                    startsAt: toIsoDateTime(editStartsAt),
+                    endsAt: toIsoDateTime(editEndsAt),
+                });
+                setIsEditingContent(false);
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
 
-    const toggleRoundStatus = () => {
+    const toggleRoundStatus = async () => {
         if (activeRound) {
-            updateRound(activeRound.id, { status: activeRound.status === 'closed' ? 'open' : 'closed' });
+            setIsSaving(true);
+            try {
+                await updateRound(activeRound.id, { status: activeRound.status === 'open' ? 'closed' : 'open' });
+            } finally {
+                setIsSaving(false);
+            }
         }
     };
 
@@ -65,6 +110,12 @@ export const AdminRoundManager: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
         >
+            {error && (
+                <div className="rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
             {/* Page Header */}
             <div className="border-b border-border pb-5">
                 <div className="flex items-center gap-3 mb-1.5">
@@ -84,7 +135,7 @@ export const AdminRoundManager: React.FC = () => {
                 <div className="w-[220px] shrink-0 flex flex-col gap-2">
                     <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Round</p>
                     {rounds.map(round => {
-                        const isSelected = selectedRoundId === round.id;
+                        const isSelected = resolvedSelectedRoundId === round.id;
                         return (
                             <button
                                 key={round.id}
@@ -113,9 +164,10 @@ export const AdminRoundManager: React.FC = () => {
                             <h2 className="text-lg font-extrabold text-white">{activeRound.title}</h2>
                         </div>
                         <button
-                            onClick={toggleRoundStatus}
+                            onClick={() => void toggleRoundStatus()}
+                            disabled={isSaving}
                             className={cn(
-                                'flex items-center gap-2 px-4 py-2 rounded-[10px] border-none text-[0.82rem] font-bold text-white cursor-pointer transition-colors duration-150',
+                                'flex items-center gap-2 px-4 py-2 rounded-[10px] border-none text-[0.82rem] font-bold text-white cursor-pointer transition-colors duration-150 disabled:opacity-60',
                                 isClosed ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
                             )}
                         >
@@ -137,8 +189,8 @@ export const AdminRoundManager: React.FC = () => {
                                     <button onClick={() => setIsEditingContent(false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-[0.78rem] font-semibold cursor-pointer">
                                         <X size={13} /> Cancel
                                     </button>
-                                    <button onClick={handleSaveContent} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 border-none rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer">
-                                        <Save size={13} /> Save
+                                    <button onClick={() => void handleSaveContent()} disabled={isSaving} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 border-none rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer disabled:opacity-60">
+                                        <Save size={13} /> {isSaving ? 'Saving...' : 'Save'}
                                     </button>
                                 </div>
                             )}
@@ -160,6 +212,36 @@ export const AdminRoundManager: React.FC = () => {
                                         <textarea value={editCaseBrief} onChange={e => setEditCaseBrief(e.target.value)}
                                             className={cn(inputClass, 'min-h-[100px] resize-y')} />
                                     </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className={labelClass}>Timer Minutes</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={editTimerMinutes}
+                                                onChange={e => setEditTimerMinutes(e.target.value)}
+                                                className={inputClass}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Starts At</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editStartsAt}
+                                                onChange={e => setEditStartsAt(e.target.value)}
+                                                className={inputClass}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Ends At</label>
+                                            <input
+                                                type="datetime-local"
+                                                value={editEndsAt}
+                                                onChange={e => setEditEndsAt(e.target.value)}
+                                                className={inputClass}
+                                            />
+                                        </div>
+                                    </div>
                                 </>
                             ) : (
                                 <>
@@ -174,6 +256,20 @@ export const AdminRoundManager: React.FC = () => {
                                     <div>
                                         <p className={labelClass}>Case Brief</p>
                                         <p className="text-sm text-slate-700 leading-relaxed">{activeRound.caseBrief}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <p className={labelClass}>Timer Minutes</p>
+                                            <p className="text-sm text-slate-700">{activeRound.timerMinutes}</p>
+                                        </div>
+                                        <div>
+                                            <p className={labelClass}>Starts At</p>
+                                            <p className="text-sm text-slate-700">{activeRound.startsAt ? new Date(activeRound.startsAt).toLocaleString() : 'Not set'}</p>
+                                        </div>
+                                        <div>
+                                            <p className={labelClass}>Ends At</p>
+                                            <p className="text-sm text-slate-700">{activeRound.endsAt ? new Date(activeRound.endsAt).toLocaleString() : 'Not set'}</p>
+                                        </div>
                                     </div>
                                 </>
                             )}

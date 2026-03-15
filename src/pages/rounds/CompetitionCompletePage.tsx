@@ -6,25 +6,12 @@ import { useAppStore } from '../../store/useAppStore';
 
 export const CompetitionCompletePage: React.FC = () => {
     const navigate = useNavigate();
-    const { team, rounds, roundsProgress } = useAppStore();
+    const { team, rounds, roundsProgress, leaderboard } = useAppStore();
 
-    let totalCorrect = 0;
-    let totalQuestions = 0;
-
-    rounds.forEach(round => {
-        const progress = roundsProgress[round.id];
-        if (!progress || progress.status !== 'submitted') return;
-        round.questions.forEach(q => {
-            totalQuestions++;
-            if (progress.answers[q.id] === q.correctOptionId) {
-                totalCorrect++;
-            }
-        });
-    });
-
-    const totalPoints = totalCorrect * 100;
     const roundsCompleted = Object.values(roundsProgress).filter(p => p.status === 'submitted').length;
-    const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const leaderboardEntry = leaderboard.find((entry) => entry.teamId === team?.id);
+    const totalPoints = leaderboardEntry?.totalScore ?? 0;
+    const rank = leaderboardEntry?.rank ?? null;
 
     return (
         <div className="pt-10 pb-16">
@@ -65,8 +52,8 @@ export const CompetitionCompletePage: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {[
                                 { label: 'Total Score', value: totalPoints.toLocaleString(), unit: 'PTS', icon: <Trophy size={14} />, color: 'text-primary' },
-                                { label: 'Finding Accuracy', value: accuracy + '%', unit: 'RATE', icon: <BarChart4 size={14} />, color: 'text-emerald-500' },
-                                { label: 'Nodes Resolved', value: `${totalCorrect}/${totalQuestions}`, unit: 'POINTS', icon: <Database size={14} />, color: 'text-white' },
+                                { label: 'Global Rank', value: rank ? `#${rank}` : 'TBD', unit: 'PLACE', icon: <BarChart4 size={14} />, color: 'text-emerald-500' },
+                                { label: 'Rounds Submitted', value: `${roundsCompleted}/${rounds.length}`, unit: 'ROUNDS', icon: <Database size={14} />, color: 'text-white' },
                             ].map((stat, i) => (
                                 <div key={i} className="bg-secondary/30 border border-border rounded-xl p-5 text-center">
                                     <div className={`flex items-center justify-center gap-1.5 mb-2 ${stat.color} opacity-60`}>
