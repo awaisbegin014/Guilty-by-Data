@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { canAccessRoundRoute } from '../../lib/roundState';
 
 export const QuestionPage: React.FC = () => {
     const { roundId, questionIndex } = useParams<{ roundId: string; questionIndex: string }>();
@@ -16,21 +17,23 @@ export const QuestionPage: React.FC = () => {
     const [submitError, setSubmitError] = useState('');
 
     const round = rounds.find(r => r.id === roundId);
+    const progress = round ? roundsProgress[round.id] : undefined;
     const qIndex = parseInt(questionIndex || '0', 10);
 
-    if (!round || isNaN(qIndex) || qIndex < 0 || qIndex >= round.questions.length) {
+    if (!round) {
         return <div className="container p-20 text-center"><p className="case-label">Analysis Node Unavailable</p></div>;
     }
 
-    if (!unlockedRounds.includes(round.id)) {
-        navigate('/dashboard', { replace: true });
-        return null;
+    if (progress?.status === 'submitted') {
+        return <Navigate to={`/round/${round.id}/submitted`} replace />;
     }
 
-    const progress = roundsProgress[round.id];
-    if (progress?.status === 'submitted') {
-        navigate(`/round/${round.id}/submitted`, { replace: true });
-        return null;
+    if (!canAccessRoundRoute(progress?.status ?? 'locked') || !unlockedRounds.includes(round.id) || !round.contentVisible) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    if (isNaN(qIndex) || qIndex < 0 || qIndex >= round.questions.length) {
+        return <div className="container p-20 text-center"><p className="case-label">Analysis Node Unavailable</p></div>;
     }
 
     const question = round.questions[qIndex];
@@ -108,7 +111,9 @@ export const QuestionPage: React.FC = () => {
 
                     <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 border border-primary/30 rounded bg-primary/10">
                         <Database size={10} className="text-primary" />
-                        <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">P_0{round.id.at(-1)}</span>
+                        <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">
+                            P_{String(round.orderIndex + 1).padStart(2, '0')}
+                        </span>
                     </div>
                 </div>
 

@@ -45,29 +45,30 @@ export interface Round {
   description: string;
   objective: string;
   caseBrief: string;
-  datasetTitle: string;
-  datasetDescription: string;
-  datasetLink?: string;
-  datasetVisible?: boolean;
-  datasetPassword?: string | null;
+  zipPassword: string | null;
   documentation: {
     sectionTitle: string;
     content: string;
   }[];
   status: 'draft' | 'open' | 'closed';
   timerMinutes: number;
+  timerState: 'idle' | 'running' | 'paused' | 'expired';
+  timerDurationSeconds: number;
+  timerRemainingSeconds: number | null;
   startsAt: string | null;
   endsAt: string | null;
+  questionCount: number;
+  contentVisible: boolean;
   questions: Question[];
 }
 
 export interface RoundProgress {
   roundId: string;
-  status: 'locked' | 'available' | 'in_progress' | 'submitted';
+  status: 'locked' | 'not_started' | 'available' | 'in_progress' | 'paused' | 'expired' | 'submitted';
   answers: Record<string, string>; // questionId -> optionId
   submittedAt: string | null;
   docsVisited: boolean;
-  datasetOpened: boolean;
+  resourceViewed: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -84,7 +85,7 @@ export interface LeaderboardEntry {
 
 export interface AppSession {
   team: Team | null;
-  draftProgressByRound: Record<string, Pick<RoundProgress, 'answers' | 'docsVisited' | 'datasetOpened'>>;
+  draftProgressByRound: Record<string, Pick<RoundProgress, 'answers' | 'docsVisited' | 'resourceViewed'>>;
 }
 
 export interface RoundSubmission {

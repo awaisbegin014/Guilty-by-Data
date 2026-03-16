@@ -32,20 +32,15 @@ interface RoundRow {
   description: string | null;
   objective: string | null;
   case_brief: string | null;
+  zip_password: string | null;
   status: RoundStatus;
   timer_minutes: number;
+  timer_state: Round['timerState'];
+  timer_duration_seconds: number;
+  timer_remaining_seconds: number | null;
   starts_at: string | null;
   ends_at: string | null;
   documentation: unknown;
-}
-
-interface DatasetRow {
-  id: string;
-  round_id: string;
-  title: string;
-  description: string | null;
-  link: string | null;
-  show_link: boolean;
 }
 
 interface OptionRow {
@@ -86,6 +81,51 @@ interface LeaderboardRow {
   round_3_score: number;
   total_score: number;
   updated_at: string;
+}
+
+interface ParticipantBundleResponse {
+  team: Team;
+  rounds: Round[];
+  submissionsByRound: Record<string, RoundSubmission>;
+  leaderboard: LeaderboardEntry[];
+}
+
+function tryParseJson(text: string) {
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function toApiFailureMessage(params: {
+  data: unknown;
+  text: string;
+  fallback: string;
+  localDevHint: string;
+}) {
+  const { data, text, fallback, localDevHint } = params;
+
+  if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
+    return data.error;
+  }
+
+  const preview = text.trim().slice(0, 120).toLowerCase();
+  if (
+    preview.startsWith('import ')
+    || preview.startsWith('export ')
+    || preview.startsWith('<!doctype')
+    || preview.startsWith('<html')
+    || preview.startsWith('<')
+  ) {
+    return localDevHint;
+  }
+
+  return fallback;
 }
 
 function requireSupabase() {
@@ -174,16 +214,10 @@ function mapQuestions(
 
 function mapRounds(
   roundRows: RoundRow[],
-  datasetRows: DatasetRow[],
   questionRows: QuestionRow[],
   optionRows: OptionRow[],
   correctRows?: CorrectAnswerRow[],
 ) {
-  const datasetsByRoundId = new Map<string, DatasetRow>();
-  for (const dataset of datasetRows) {
-    datasetsByRoundId.set(dataset.round_id, dataset);
-  }
-
   const optionsByQuestionId = new Map<string, OptionRow[]>();
   for (const option of optionRows) {
     const group = optionsByQuestionId.get(option.question_id) ?? [];
@@ -207,8 +241,6 @@ function mapRounds(
     .slice()
     .sort((left, right) => left.order_index - right.order_index)
     .map<Round>((row) => {
-      const dataset = datasetsByRoundId.get(row.id);
-
       return {
         id: row.id,
         orderIndex: row.order_index,
@@ -216,15 +248,17 @@ function mapRounds(
         description: row.description ?? '',
         objective: row.objective ?? '',
         caseBrief: row.case_brief ?? '',
-        datasetTitle: dataset?.title ?? 'Dataset',
-        datasetDescription: dataset?.description ?? '',
-        datasetLink: dataset?.link ?? undefined,
-        datasetVisible: dataset?.show_link ?? false,
+        zipPassword: row.zip_password,
         documentation: toDocumentationSections(row.documentation),
         status: row.status,
         timerMinutes: row.timer_minutes,
+        timerState: row.timer_state,
+        timerDurationSeconds: row.timer_duration_seconds,
+        timerRemainingSeconds: row.timer_remaining_seconds,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
+        questionCount: (questionsByRoundId.get(row.id) ?? []).length,
+        contentVisible: true,
         questions: mapQuestions(
           questionsByRoundId.get(row.id) ?? [],
           optionsByQuestionId,
@@ -237,13 +271,10 @@ function mapRounds(
 async function loadRoundRows() {
   const client = requireSupabase();
 
-  const [roundsResult, datasetsResult, questionsResult, optionsResult] = await Promise.all([
+  const [roundsResult, questionsResult, optionsResult] = await Promise.all([
     client
       .from('rounds')
-      .select('id, order_index, title, description, objective, case_brief, status, timer_minutes, starts_at, ends_at, documentation'),
-    client
-      .from('datasets')
-      .select('id, round_id, title, description, link, show_link'),
+      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, starts_at, ends_at, documentation'),
     client
       .from('questions')
       .select('id, round_id, order_index, text, type, input_type'),
@@ -256,10 +287,6 @@ async function loadRoundRows() {
     throw roundsResult.error;
   }
 
-  if (datasetsResult.error) {
-    throw datasetsResult.error;
-  }
-
   if (questionsResult.error) {
     throw questionsResult.error;
   }
@@ -270,7 +297,6 @@ async function loadRoundRows() {
 
   return {
     roundRows: (roundsResult.data ?? []) as RoundRow[],
-    datasetRows: (datasetsResult.data ?? []) as DatasetRow[],
     questionRows: (questionsResult.data ?? []) as QuestionRow[],
     optionRows: (optionsResult.data ?? []) as OptionRow[],
   };
@@ -405,7 +431,56 @@ export async function fetchAdminProfile(id: string) {
 
 export async function fetchParticipantRounds() {
   const rows = await loadRoundRows();
-  return mapRounds(rows.roundRows, rows.datasetRows, rows.questionRows, rows.optionRows);
+  return mapRounds(rows.roundRows, rows.questionRows, rows.optionRows);
+}
+
+export async function fetchParticipantBundle() {
+  const client = requireSupabase();
+  const {
+    data: { session },
+    error,
+  } = await client.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!session?.access_token) {
+    throw new Error('You must be signed in to load participant data.');
+  }
+
+  const participantBundleUrl = (import.meta.env.VITE_PARTICIPANT_BUNDLE_API_URL || '').trim() || '/api/participant-bundle';
+  const response = await fetch(participantBundleUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const text = await response.text();
+  const data = tryParseJson(text);
+
+  if (!response.ok) {
+    throw new Error(toApiFailureMessage({
+      data,
+      text,
+      fallback: 'Failed to load participant data.',
+      localDevHint: 'Participant API returned a non-JSON response. If you are running locally, start the app with `vercel dev` or set `VITE_PARTICIPANT_BUNDLE_API_URL`.',
+    }));
+  }
+
+  if (!data) {
+    throw new Error(
+      toApiFailureMessage({
+        data,
+        text,
+        fallback: 'Participant API returned an invalid response.',
+        localDevHint: 'Participant API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_PARTICIPANT_BUNDLE_API_URL`.',
+      }),
+    );
+  }
+
+  return data as ParticipantBundleResponse;
 }
 
 export async function fetchAdminRounds() {
@@ -421,7 +496,6 @@ export async function fetchAdminRounds() {
 
   return mapRounds(
     rows.roundRows,
-    rows.datasetRows,
     rows.questionRows,
     rows.optionRows,
     (correctAnswersResult.data ?? []) as CorrectAnswerRow[],
@@ -488,10 +562,7 @@ export async function updateRound(roundId: string, updates: Partial<Round>) {
   if (typeof updates.description === 'string') roundPayload.description = updates.description;
   if (typeof updates.objective === 'string') roundPayload.objective = updates.objective;
   if (typeof updates.caseBrief === 'string') roundPayload.case_brief = updates.caseBrief;
-  if (typeof updates.status === 'string') roundPayload.status = updates.status;
-  if (typeof updates.timerMinutes === 'number') roundPayload.timer_minutes = updates.timerMinutes;
-  if (updates.startsAt !== undefined) roundPayload.starts_at = updates.startsAt;
-  if (updates.endsAt !== undefined) roundPayload.ends_at = updates.endsAt;
+  if (updates.zipPassword !== undefined) roundPayload.zip_password = updates.zipPassword;
   if (updates.documentation !== undefined) roundPayload.documentation = updates.documentation;
 
   if (Object.keys(roundPayload).length > 0) {
@@ -499,30 +570,6 @@ export async function updateRound(roundId: string, updates: Partial<Round>) {
       .from('rounds')
       .update(roundPayload)
       .eq('id', roundId);
-
-    if (error) {
-      throw error;
-    }
-  }
-
-  if (
-    updates.datasetTitle !== undefined ||
-    updates.datasetDescription !== undefined ||
-    updates.datasetLink !== undefined ||
-    updates.datasetVisible !== undefined
-  ) {
-    const { error } = await client
-      .from('datasets')
-      .upsert(
-        {
-          round_id: roundId,
-          title: updates.datasetTitle ?? 'Dataset',
-          description: updates.datasetDescription ?? '',
-          link: updates.datasetLink ?? null,
-          show_link: updates.datasetVisible ?? Boolean(updates.datasetLink),
-        },
-        { onConflict: 'round_id' },
-      );
 
     if (error) {
       throw error;
@@ -720,15 +767,81 @@ export async function submitRound(roundId: string, answers: Record<string, strin
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) as unknown : null;
+  const data = tryParseJson(text);
 
   if (!response.ok) {
+    throw new Error(toApiFailureMessage({
+      data,
+      text,
+      fallback: response.status === 404
+        ? 'Submission API not found. If you are running locally, start the app with `vercel dev` or set `VITE_SUBMIT_API_URL`.'
+        : 'Round submission failed.',
+      localDevHint: 'Submission API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_SUBMIT_API_URL`.',
+    }));
+  }
+
+  if (!data) {
     throw new Error(
-      data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
-        ? data.error
-        : response.status === 404
-          ? 'Submission API not found. If you are running locally, start the app with `vercel dev` or set `VITE_SUBMIT_API_URL`.'
-          : 'Round submission failed.',
+      toApiFailureMessage({
+        data,
+        text,
+        fallback: 'Submission API returned an invalid response.',
+        localDevHint: 'Submission API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_SUBMIT_API_URL`.',
+      }),
+    );
+  }
+
+  return data;
+}
+
+export async function runAdminRoundAction(
+  roundId: string,
+  action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+  payload?: { timerMinutes?: number },
+) {
+  const client = requireSupabase();
+  const {
+    data: { session },
+  } = await client.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('You must be signed in as an admin to manage rounds.');
+  }
+
+  const adminRoundActionUrl = (import.meta.env.VITE_ADMIN_ROUND_ACTION_API_URL || '').trim() || '/api/admin-round-action';
+  const response = await fetch(adminRoundActionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      roundId,
+      action,
+      timerMinutes: payload?.timerMinutes,
+    }),
+  });
+
+  const text = await response.text();
+  const data = tryParseJson(text);
+
+  if (!response.ok) {
+    throw new Error(toApiFailureMessage({
+      data,
+      text,
+      fallback: 'Round action failed.',
+      localDevHint: 'Admin round action API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_ADMIN_ROUND_ACTION_API_URL`.',
+    }));
+  }
+
+  if (!data) {
+    throw new Error(
+      toApiFailureMessage({
+        data,
+        text,
+        fallback: 'Admin round action API returned an invalid response.',
+        localDevHint: 'Admin round action API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_ADMIN_ROUND_ACTION_API_URL`.',
+      }),
     );
   }
 

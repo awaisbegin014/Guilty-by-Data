@@ -102,21 +102,21 @@ export const AdminQuestionManager: React.FC = () => {
     return (
         <div className="flex flex-col gap-8">
             {error && (
-                <div className="rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
                     {error}
                 </div>
             )}
 
-            <div className="flex items-center justify-between border-b border-border pb-6">
+            <div className="flex items-center justify-between rounded-3xl border border-slate-800 bg-slate-950/70 p-6">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center">
-                        <HelpCircle size={18} className="text-blue-600" />
+                    <div className="w-9 h-9 rounded-[10px] bg-primary/10 flex items-center justify-center">
+                        <HelpCircle size={18} className="text-primary" />
                     </div>
-                    <h1 className="text-2xl font-extrabold text-slate-900">Question Manager</h1>
+                    <h1 className="text-2xl font-extrabold text-white">Question Manager</h1>
                 </div>
                 <button
                     onClick={handleAddQuestion}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-bold cursor-pointer hover:bg-slate-800 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 text-white rounded-lg text-sm font-bold cursor-pointer hover:border-primary/50 transition-colors"
                 >
                     <Plus size={16} /> Add Question
                 </button>
@@ -134,8 +134,8 @@ export const AdminQuestionManager: React.FC = () => {
                                 className={cn(
                                     'w-full text-left px-4 py-3 rounded-[10px] text-sm cursor-pointer transition-all duration-150',
                                     isActive
-                                        ? 'border-[1.5px] border-blue-600 bg-blue-50 text-blue-700 font-bold'
-                                        : 'border border-border bg-white text-slate-700 font-medium hover:bg-slate-50'
+                                        ? 'border-[1.5px] border-primary bg-primary/10 text-white font-bold'
+                                        : 'border border-slate-800 bg-slate-950/60 text-slate-300 font-medium hover:border-slate-700'
                                 )}
                             >
                                 <div className="flex items-center justify-between">
@@ -153,14 +153,14 @@ export const AdminQuestionManager: React.FC = () => {
 
                         if (isEditing) {
                             return (
-                                <div key={question.id} className="bg-white border-2 border-slate-900 rounded-[14px] p-6 shadow-xl">
+                                <div key={question.id} className="bg-slate-950/70 border border-primary/30 rounded-[20px] p-6 shadow-xl">
                                     <div className="flex items-center justify-between mb-6">
-                                        <h4 className="text-sm font-bold text-slate-900">Edit Question {qIndex + 1}</h4>
+                                        <h4 className="text-sm font-bold text-white">Edit Question {qIndex + 1}</h4>
                                         <div className="flex gap-2">
-                                            <button onClick={() => setEditingQuestionId(null)} className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-xs font-semibold cursor-pointer">
+                                            <button onClick={() => setEditingQuestionId(null)} className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-300 text-xs font-semibold cursor-pointer">
                                                 Cancel
                                             </button>
-                                            <button onClick={() => void saveEdit()} disabled={isSaving} className="px-3 py-1.5 bg-slate-900 border-none rounded-lg text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
+                                            <button onClick={() => void saveEdit()} disabled={isSaving} className="px-3 py-1.5 bg-primary/10 border border-primary/30 rounded-lg text-white text-xs font-semibold cursor-pointer disabled:opacity-50">
                                                 {isSaving ? 'Saving...' : 'Save Question'}
                                             </button>
                                         </div>
@@ -168,29 +168,29 @@ export const AdminQuestionManager: React.FC = () => {
 
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Question Text</label>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Question Text</label>
                                             <textarea
-                                                className="w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm text-slate-900 outline-none focus:border-slate-900 min-h-[80px]"
+                                                className="w-full px-3.5 py-2.5 border border-slate-700 rounded-[10px] text-sm text-slate-100 bg-slate-950 outline-none focus:border-primary min-h-[80px]"
                                                 value={editForm.text}
                                                 onChange={(event) => setEditForm({ ...editForm, text: event.target.value })}
                                             />
                                         </div>
 
                                         <div className="space-y-3">
-                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Options (Select the correct one)</label>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Options (Select the correct one)</label>
                                             {editForm.options?.map((option, idx) => (
                                                 <div key={option.id} className="flex items-center gap-3">
                                                     <button
                                                         className={cn(
                                                             "w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs transition-colors",
-                                                            editForm.correctOptionId === option.id ? "bg-green-600 text-white" : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                                                            editForm.correctOptionId === option.id ? "bg-green-600 text-white" : "bg-slate-900 border border-slate-700 text-slate-400 hover:border-slate-500"
                                                         )}
                                                         onClick={() => setEditForm({ ...editForm, correctOptionId: option.id })}
                                                     >
                                                         {editForm.correctOptionId === option.id ? <Check size={14} /> : String.fromCharCode(65 + idx)}
                                                     </button>
                                                     <input
-                                                        className="flex-1 px-3.5 py-2 border-[1.5px] border-slate-200 rounded-[10px] text-sm text-slate-900 outline-none focus:border-slate-900"
+                                                        className="flex-1 px-3.5 py-2 border border-slate-700 rounded-[10px] text-sm text-slate-100 bg-slate-950 outline-none focus:border-primary"
                                                         value={option.text}
                                                         onChange={(event) => {
                                                             const options = [...(editForm.options || [])];
@@ -207,19 +207,19 @@ export const AdminQuestionManager: React.FC = () => {
                         }
 
                         return (
-                            <div key={question.id} className="bg-white border border-border rounded-[14px] p-5 hover:border-slate-300 transition-colors group">
+                            <div key={question.id} className="bg-slate-950/60 border border-slate-800 rounded-[20px] p-5 hover:border-slate-700 transition-colors group">
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                     <div className="flex items-start gap-3">
-                                        <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
+                                        <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-xs font-bold text-slate-400">
                                             {qIndex + 1}
                                         </div>
-                                        <p className="text-[0.95rem] font-bold text-slate-900 leading-snug pt-0.5">{question.text}</p>
+                                        <p className="text-[0.95rem] font-bold text-slate-100 leading-snug pt-0.5">{question.text}</p>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => startEditing(question)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all cursor-pointer">
+                                        <button onClick={() => startEditing(question)} className="p-2 h-8 w-8 bg-slate-900 border border-slate-700 rounded-lg text-slate-400 hover:text-white hover:border-primary transition-all cursor-pointer">
                                             <Edit3 size={14} />
                                         </button>
-                                        <button onClick={() => void handleDeleteQuestion(question.id)} className="p-2 h-8 w-8 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-600 transition-all cursor-pointer">
+                                        <button onClick={() => void handleDeleteQuestion(question.id)} className="p-2 h-8 w-8 bg-slate-900 border border-slate-700 rounded-lg text-slate-400 hover:text-red-300 hover:border-red-500 transition-all cursor-pointer">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
@@ -230,15 +230,15 @@ export const AdminQuestionManager: React.FC = () => {
                                         return (
                                             <div key={option.id} className={cn(
                                                 "flex items-center gap-3 p-2.5 rounded-lg border",
-                                                isCorrect ? "bg-green-50 border-green-200" : "bg-slate-50 border-slate-100"
+                                                isCorrect ? "bg-green-500/10 border-green-500/20" : "bg-slate-900 border-slate-800"
                                             )}>
                                                 <div className={cn(
                                                     "w-6 h-6 rounded flex items-center justify-center font-bold text-[0.65rem]",
-                                                    isCorrect ? "bg-green-600 text-white" : "bg-white text-slate-400 border border-slate-200"
+                                                    isCorrect ? "bg-green-600 text-white" : "bg-slate-950 text-slate-400 border border-slate-700"
                                                 )}>
                                                     {String.fromCharCode(65 + idx)}
                                                 </div>
-                                                <span className={cn("text-xs font-medium", isCorrect ? "text-green-900" : "text-slate-600")}>
+                                                <span className={cn("text-xs font-medium", isCorrect ? "text-green-100" : "text-slate-300")}>
                                                     {option.text}
                                                 </span>
                                             </div>

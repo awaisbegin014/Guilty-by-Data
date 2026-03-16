@@ -1,51 +1,118 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle, PauseCircle, Lock, Radar } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '@/lib/utils';
+import { getEffectiveTimerState } from '../lib/roundState';
 
 interface TimerBannerProps {
     roundId: string;
 }
 
 export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
-    const { rounds, roundsProgress } = useAppStore();
+    const { rounds, roundsProgress, refreshParticipantData } = useAppStore();
     const progress = roundsProgress[roundId];
     const round = rounds.find((item) => item.id === roundId);
-    const navigate = useNavigate();
     const [now, setNow] = useState(() => Date.now());
-    const timeLeft = round?.endsAt ? Math.max(0, new Date(round.endsAt).getTime() - now) : null;
+    const timerState = round ? getEffectiveTimerState(round, now) : null;
+    const timeLeftSeconds = timerState === 'running' && round?.endsAt
+        ? Math.max(0, Math.floor((new Date(round.endsAt).getTime() - now) / 1000))
+        : round?.timerRemainingSeconds ?? null;
 
     useEffect(() => {
-        if (!round?.endsAt || progress?.status === 'submitted') {
+        if (!round || progress?.status === 'submitted') {
             return;
         }
 
-        const endTime = new Date(round.endsAt).getTime();
-
         const interval = setInterval(() => {
-            const nextTime = Math.max(0, endTime - Date.now());
-            setNow(Date.now());
+            const nextNow = Date.now();
+            setNow(nextNow);
 
-            if (nextTime === 0 && progress?.status !== 'submitted') {
-                clearInterval(interval);
-                if (window.location.pathname.startsWith(`/round/${roundId}`)) {
-                    navigate(`/round/${roundId}/submitted`);
+            if (round.endsAt && round.timerState === 'running') {
+                const nextTime = Math.max(0, new Date(round.endsAt).getTime() - nextNow);
+                if (nextTime === 0) {
+                    clearInterval(interval);
+                    void refreshParticipantData();
                 }
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [navigate, progress?.status, round?.endsAt, roundId]);
+    }, [progress?.status, refreshParticipantData, round, roundId]);
 
-    if (progress?.status === 'submitted' || timeLeft === null) {
+    if (progress?.status === 'submitted' || !round) {
         return null;
     }
 
-    const minutes = Math.floor(timeLeft / 60000);
-    const seconds = Math.floor((timeLeft % 60000) / 1000);
-    const isWarning = timeLeft < 300000;
-    const isCritical = timeLeft < 60000;
+    if (progress?.status === 'locked') {
+        return (
+            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
+                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-border bg-slate-950/60 text-slate-300">
+                    <Lock size={15} className="shrink-0" />
+                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
+                        Round Locked
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (timerState === 'idle') {
+        return (
+            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
+                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-border bg-slate-900/70 text-slate-200">
+                    <Radar size={15} className="shrink-0 text-primary" />
+                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
+                        Timer Not Started
+                    </span>
+                    <span className="text-[0.65rem] text-slate-400 uppercase tracking-wider">
+                        Waiting for admin activation
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (timerState === 'paused') {
+        const minutes = Math.floor((timeLeftSeconds ?? 0) / 60);
+        const seconds = Math.floor((timeLeftSeconds ?? 0) % 60);
+
+        return (
+            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
+                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-100">
+                    <PauseCircle size={15} className="shrink-0" />
+                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
+                        Timer Paused
+                    </span>
+                    <span className="mx-1 opacity-40">|</span>
+                    <span className="font-mono text-[0.95rem] font-black tracking-widest">
+                        {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (timerState === 'expired') {
+        return (
+            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
+                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-red-700 bg-red-600 text-white shadow-red-900/20">
+                    <AlertTriangle size={15} className="shrink-0" />
+                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
+                        Round Expired
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    if (timeLeftSeconds === null) {
+        return null;
+    }
+
+    const minutes = Math.floor(timeLeftSeconds / 60);
+    const seconds = Math.floor(timeLeftSeconds % 60);
+    const isWarning = timeLeftSeconds < 300;
+    const isCritical = timeLeftSeconds < 60;
 
     return (
         <div className="container max-w-[700px] mt-2 mb-1 shrink-0">

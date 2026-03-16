@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { Trophy, ArrowLeft, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatParticipantIdentifier } from '../../lib/teamIdentity';
 
 const formatTimeAgo = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
@@ -91,7 +92,7 @@ export const LeaderboardPage: React.FC = () => {
                                                 'text-lg font-black uppercase tracking-tight truncate transition-colors',
                                                 isCurrentTeam ? 'text-primary' : 'text-slate-200 group-hover:text-white'
                                             )}>
-                                                {entry.teamName}
+                                                {formatParticipantIdentifier(entry.username || entry.teamName)}
                                             </span>
                                             {isCurrentTeam && (
                                                 <span className="text-[0.55rem] font-mono font-bold uppercase tracking-[0.3em] text-primary">

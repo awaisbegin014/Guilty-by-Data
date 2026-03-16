@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Lock, ArrowRight, Shield, Database } from 'lucide-react';
+import { CheckCircle2, Lock, ArrowRight, Shield, Database, PauseCircle, AlertTriangle, Radar } from 'lucide-react';
 import type { Round, RoundProgress } from '../types';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -17,21 +17,80 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isLocked 
 
     const status = progress?.status || 'locked';
     const isCompleted = status === 'submitted';
+    const isPlayable = status === 'available' || status === 'in_progress';
+    const isHardLocked = status === 'locked' || isLocked;
 
     const handleAction = () => {
-        if (isLocked) return;
+        if (isCompleted) {
+            navigate(`/round/${round.id}/submitted`);
+            return;
+        }
+
+        if (!isPlayable) return;
         navigate(`/round/${round.id}`);
     };
+
+    const statusMeta = {
+        submitted: {
+            badge: 'RESOLVED',
+            icon: <CheckCircle2 size={16} />,
+            accent: 'border-emerald-500/20 bg-emerald-500/[0.01]',
+            iconClass: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500',
+            buttonLabel: 'Review Submission',
+        },
+        available: {
+            badge: 'LIVE',
+            icon: <Shield size={16} />,
+            accent: '',
+            iconClass: 'bg-slate-800 border-border text-primary shadow-inner-glow',
+            buttonLabel: 'Open Case',
+        },
+        in_progress: {
+            badge: 'IN PROGRESS',
+            icon: <Shield size={16} />,
+            accent: 'border-primary/20 bg-primary/[0.02]',
+            iconClass: 'bg-primary/10 border-primary/20 text-primary',
+            buttonLabel: 'Resume Analysis',
+        },
+        not_started: {
+            badge: 'STANDBY',
+            icon: <Radar size={16} />,
+            accent: 'bg-slate-900/10 border-border/30',
+            iconClass: 'bg-slate-800/50 border-border text-slate-300',
+            buttonLabel: 'Awaiting Start',
+        },
+        paused: {
+            badge: 'PAUSED',
+            icon: <PauseCircle size={16} />,
+            accent: 'bg-amber-500/[0.04] border-amber-500/20',
+            iconClass: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+            buttonLabel: 'Timer Paused',
+        },
+        expired: {
+            badge: 'EXPIRED',
+            icon: <AlertTriangle size={16} />,
+            accent: 'bg-red-500/[0.04] border-red-500/20',
+            iconClass: 'bg-red-500/10 border-red-500/20 text-red-300',
+            buttonLabel: 'Window Closed',
+        },
+        locked: {
+            badge: 'LOCKED',
+            icon: <Lock size={16} />,
+            accent: 'opacity-60 cursor-not-allowed grayscale bg-slate-900/10 border-border/30',
+            iconClass: 'bg-slate-800/50 border-border text-muted-foreground/50',
+            buttonLabel: 'Access Restricted',
+        },
+    }[status];
 
     return (
         <div 
             onClick={handleAction}
             className={cn(
                 "dossier-card group cursor-pointer transition-all duration-300 rounded-xl p-8 flex flex-col sm:flex-row sm:items-center gap-8 relative overflow-hidden",
-                isLocked 
-                    ? "opacity-60 cursor-not-allowed grayscale bg-slate-900/10 border-border/30" 
+                isHardLocked || !isPlayable
+                    ? "cursor-default"
                     : "bg-[#181a1e] border-[#2d333a] hover:border-primary/40 hover:bg-[#1c2025] hover:shadow-2xl hover:shadow-primary/5 active:scale-[0.99]",
-                isCompleted && "border-emerald-500/20 bg-emerald-500/[0.01]"
+                statusMeta.accent
             )}
         >
             {/* Folder Accents */}
@@ -44,23 +103,21 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isLocked 
                     <div className="flex items-center gap-2">
                         <div className={cn(
                             "w-8 h-8 rounded-lg flex items-center justify-center border transition-all duration-300",
-                            isCompleted 
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" 
-                                : isLocked 
-                                    ? "bg-slate-800/50 border-border text-muted-foreground/50" 
-                                    : "bg-slate-800 border-border text-primary shadow-inner-glow"
+                            statusMeta.iconClass
                         )}>
-                            {isCompleted ? <CheckCircle2 size={16} /> : (isLocked ? <Lock size={16} /> : <Shield size={16} />)}
+                            {statusMeta.icon}
                         </div>
-                        <span className="case-label text-[0.6rem]">Phase 0{round.id.at(-1)}</span>
+                        <span className="case-label text-[0.6rem]">Phase {String(round.orderIndex + 1).padStart(2, '0')}</span>
                     </div>
-                    {isCompleted ? (
-                        <Badge variant="success" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-black text-[0.6rem] tracking-widest">RESOLVED</Badge>
-                    ) : (
-                        isLocked 
-                            ? <Badge variant="outline" className="opacity-40 font-black text-[0.6rem] tracking-widest">LOCKED</Badge> 
-                            : <Badge variant="info" className="bg-primary/10 text-primary border-primary/20 font-black text-[0.6rem] tracking-widest">ACTIVE</Badge>
-                    )}
+                    <Badge
+                        variant={isCompleted ? 'success' : status === 'expired' ? 'warning' : status === 'paused' ? 'warning' : status === 'locked' ? 'outline' : 'info'}
+                        className={cn(
+                            'font-black text-[0.6rem] tracking-widest',
+                            status === 'locked' && 'opacity-60',
+                        )}
+                    >
+                        {statusMeta.badge}
+                    </Badge>
                 </div>
 
                 {/* Middle: Title */}
@@ -78,19 +135,19 @@ export const RoundCard: React.FC<RoundCardProps> = ({ round, progress, isLocked 
             <div className="flex flex-col sm:items-end justify-between sm:h-full gap-4 sm:border-l sm:border-border/50 sm:pl-8">
                 <div className="flex items-center gap-2 text-[0.6rem] font-mono text-muted-foreground font-black tracking-widest uppercase">
                     <Database size={12} className="text-primary/60" />
-                    <span>{round.questions.length} Data Nodes</span>
+                    <span>{round.questionCount} Data Nodes</span>
                 </div>
                 
                 <Button 
-                    variant={isLocked ? "subtle" : "primary"} 
+                    variant={!isPlayable ? "subtle" : "primary"} 
                     size="sm"
                     className={cn(
                         "h-11 px-8 rounded-lg font-black uppercase tracking-[0.2em] text-[0.65rem] transition-all duration-300",
-                        !isLocked && "group-hover:translate-x-1"
+                        (isPlayable || isCompleted) && "group-hover:translate-x-1"
                     )}
                 >
-                    {isCompleted ? "Review Analysis" : (isLocked ? "Access Restricted" : "Open Case")}
-                    {!isLocked && <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+                    {statusMeta.buttonLabel}
+                    {(isPlayable || isCompleted) && <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />}
                 </Button>
             </div>
         </div>

@@ -1,334 +1,439 @@
-import React, { useState } from 'react';
-import { useAppStore } from '../../store/useAppStore';
-import { Target, Link as LinkIcon, Save, Edit3, X, Lock, Unlock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import {
+  Clock3,
+  Edit3,
+  KeyRound,
+  Lock,
+  PauseCircle,
+  PlayCircle,
+  RotateCcw,
+  Save,
+  TimerReset,
+  Unlock,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '../../store/useAppStore';
+import { getEffectiveTimerState } from '../../lib/roundState';
+
+const inputClass = 'w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors focus:border-primary';
+const labelClass = 'mb-2 block text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400';
 
 export const AdminRoundManager: React.FC = () => {
-    const { rounds, updateRound, error } = useAppStore();
-    const [selectedRoundId, setSelectedRoundId] = useState<string>(rounds[0]?.id || '');
-    const [isSaving, setIsSaving] = useState(false);
+  const { rounds, updateRound, runAdminRoundAction, error } = useAppStore();
+  const [selectedRoundId, setSelectedRoundId] = useState<string>('');
+  const [isSavingContent, setIsSavingContent] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isRunningAction, setIsRunningAction] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editObjective, setEditObjective] = useState('');
+  const [editCaseBrief, setEditCaseBrief] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [zipPassword, setZipPassword] = useState('');
+  const [timerMinutes, setTimerMinutes] = useState('');
 
-    const [isEditingLink, setIsEditingLink] = useState(false);
-    const [datasetLink, setDatasetLink] = useState('');
+  useEffect(() => {
+    if (!selectedRoundId && rounds[0]) {
+      setSelectedRoundId(rounds[0].id);
+    }
+  }, [rounds, selectedRoundId]);
 
-    const [isEditingContent, setIsEditingContent] = useState(false);
-    const [editTitle, setEditTitle] = useState('');
-    const [editCaseBrief, setEditCaseBrief] = useState('');
-    const [editObjective, setEditObjective] = useState('');
-    const [editTimerMinutes, setEditTimerMinutes] = useState('30');
-    const [editStartsAt, setEditStartsAt] = useState('');
-    const [editEndsAt, setEditEndsAt] = useState('');
+  const activeRound = rounds.find((round) => round.id === selectedRoundId) ?? rounds[0];
 
-    const resolvedSelectedRoundId = selectedRoundId || rounds[0]?.id || '';
-    const activeRound = rounds.find(r => r.id === resolvedSelectedRoundId) ?? rounds[0];
+  useEffect(() => {
+    if (!activeRound) {
+      return;
+    }
 
-    const toDateTimeInput = (value: string | null) => {
-        if (!value) return '';
-        const date = new Date(value);
-        const offset = date.getTimezoneOffset();
-        const localDate = new Date(date.getTime() - offset * 60000);
-        return localDate.toISOString().slice(0, 16);
-    };
+    setEditTitle(activeRound.title);
+    setEditObjective(activeRound.objective);
+    setEditCaseBrief(activeRound.caseBrief);
+    setEditDescription(activeRound.description);
+    setZipPassword(activeRound.zipPassword ?? '');
+    setTimerMinutes(String(activeRound.timerMinutes));
+  }, [activeRound]);
 
-    const toIsoDateTime = (value: string) => {
-        return value ? new Date(value).toISOString() : null;
-    };
+  if (!activeRound) {
+    return null;
+  }
 
-    const handleSelectRound = (id: string) => {
-        setSelectedRoundId(id);
-        setIsEditingLink(false);
-        setIsEditingContent(false);
-    };
+  const effectiveTimerState = getEffectiveTimerState(activeRound);
+  const isUnlocked = activeRound.status === 'open';
+  const remainingSeconds = effectiveTimerState === 'running' && activeRound.endsAt
+    ? Math.max(0, Math.floor((new Date(activeRound.endsAt).getTime() - Date.now()) / 1000))
+    : activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds;
+  const remainingMinutes = Math.floor(remainingSeconds / 60);
+  const remainingDisplaySeconds = remainingSeconds % 60;
 
-    const handleEditLinkClick = () => {
-        if (activeRound) { setDatasetLink(activeRound.datasetLink || ''); setIsEditingLink(true); }
-    };
-    const handleSaveLink = () => {
-        if (activeRound) {
-            void updateRound(activeRound.id, {
-                datasetLink,
-                datasetTitle: activeRound.datasetTitle,
-                datasetDescription: activeRound.datasetDescription,
-                datasetVisible: Boolean(datasetLink),
-            });
-            setIsEditingLink(false);
-        }
-    };
+  const beginContentEdit = () => {
+    setEditTitle(activeRound.title);
+    setEditObjective(activeRound.objective);
+    setEditCaseBrief(activeRound.caseBrief);
+    setEditDescription(activeRound.description);
+    setIsEditingContent(true);
+  };
 
-    const handleEditContentClick = () => {
-        if (activeRound) {
-            setEditTitle(activeRound.title);
-            setEditCaseBrief(activeRound.caseBrief);
-            setEditObjective(activeRound.objective);
-            setEditTimerMinutes(String(activeRound.timerMinutes));
-            setEditStartsAt(toDateTimeInput(activeRound.startsAt));
-            setEditEndsAt(toDateTimeInput(activeRound.endsAt));
-            setIsEditingContent(true);
-        }
-    };
-    const handleSaveContent = async () => {
-        if (activeRound) {
-            setIsSaving(true);
-            try {
-                await updateRound(activeRound.id, {
-                    title: editTitle,
-                    caseBrief: editCaseBrief,
-                    objective: editObjective,
-                    timerMinutes: Number(editTimerMinutes) || activeRound.timerMinutes,
-                    startsAt: toIsoDateTime(editStartsAt),
-                    endsAt: toIsoDateTime(editEndsAt),
-                });
-                setIsEditingContent(false);
-            } finally {
-                setIsSaving(false);
-            }
-        }
-    };
+  const saveContent = async () => {
+    setIsSavingContent(true);
+    try {
+      await updateRound(activeRound.id, {
+        title: editTitle,
+        description: editDescription,
+        objective: editObjective,
+        caseBrief: editCaseBrief,
+      });
+      setIsEditingContent(false);
+    } finally {
+      setIsSavingContent(false);
+    }
+  };
 
-    const toggleRoundStatus = async () => {
-        if (activeRound) {
-            setIsSaving(true);
-            try {
-                await updateRound(activeRound.id, { status: activeRound.status === 'open' ? 'closed' : 'open' });
-            } finally {
-                setIsSaving(false);
-            }
-        }
-    };
+  const savePassword = async () => {
+    setIsSavingPassword(true);
+    try {
+      await updateRound(activeRound.id, {
+        zipPassword: zipPassword.trim() || null,
+      });
+      setIsEditingPassword(false);
+    } finally {
+      setIsSavingPassword(false);
+    }
+  };
 
-    if (!activeRound) return null;
-    const isClosed = activeRound.status === 'closed';
+  const handleRoundAction = async (
+    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+    payload?: { timerMinutes?: number },
+  ) => {
+    setIsRunningAction(true);
+    try {
+      await runAdminRoundAction(activeRound.id, action, payload);
+    } finally {
+      setIsRunningAction(false);
+    }
+  };
 
-    const inputClass = "w-full px-3.5 py-2.5 border-[1.5px] border-slate-200 rounded-[10px] text-sm font-sans text-slate-900 bg-white outline-none transition-colors duration-150 leading-relaxed focus:border-slate-900";
-    const labelClass = "text-[0.72rem] font-bold text-slate-500 uppercase tracking-wider block mb-1.5";
+  const actionCards = [
+    {
+      label: isUnlocked ? 'Lock Round' : 'Unlock Round',
+      description: isUnlocked ? 'Participants keep completed submissions visible, but new access is blocked.' : 'Expose the round card and allow timer control.',
+      icon: isUnlocked ? <Lock size={16} /> : <Unlock size={16} />,
+      disabled: isRunningAction,
+      onClick: () => void handleRoundAction(isUnlocked ? 'lock_round' : 'unlock_round'),
+      className: isUnlocked
+        ? 'border-red-500/20 bg-red-500/10 text-red-100 hover:border-red-400/40'
+        : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-100 hover:border-emerald-400/40',
+    },
+    {
+      label: 'Start Timer',
+      description: 'Starts a fresh timer from the configured default duration.',
+      icon: <PlayCircle size={16} />,
+      disabled: !isUnlocked || isRunningAction || !['idle', 'expired'].includes(effectiveTimerState),
+      onClick: () => void handleRoundAction('start_timer'),
+      className: 'border-primary/20 bg-primary/10 text-slate-100 hover:border-primary/40',
+    },
+    {
+      label: 'Pause Timer',
+      description: 'Freezes the active timer and preserves the remaining time.',
+      icon: <PauseCircle size={16} />,
+      disabled: !isUnlocked || isRunningAction || effectiveTimerState !== 'running',
+      onClick: () => void handleRoundAction('pause_timer'),
+      className: 'border-amber-500/20 bg-amber-500/10 text-amber-100 hover:border-amber-400/40',
+    },
+    {
+      label: 'Resume Timer',
+      description: 'Continues a paused timer from the remaining time.',
+      icon: <RotateCcw size={16} />,
+      disabled: !isUnlocked || isRunningAction || effectiveTimerState !== 'paused',
+      onClick: () => void handleRoundAction('resume_timer'),
+      className: 'border-sky-500/20 bg-sky-500/10 text-sky-100 hover:border-sky-400/40',
+    },
+  ];
 
-    return (
-        <motion.div
-            className="max-w-[900px] mx-auto flex flex-col gap-6"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-        >
-            {error && (
-                <div className="rounded-[14px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
-                </div>
-            )}
+  return (
+    <motion.div
+      className="mx-auto flex max-w-6xl flex-col gap-6"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+    >
+      {error && (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          {error}
+        </div>
+      )}
 
-            {/* Page Header */}
-            <div className="border-b border-border pb-5">
-                <div className="flex items-center gap-3 mb-1.5">
-                    <div className="w-9 h-9 rounded-[10px] bg-blue-50 flex items-center justify-center">
-                        <Target size={18} className="text-blue-600" />
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl">
+        <p className="case-label mb-2">Round Command</p>
+        <h1 className="text-3xl font-black uppercase tracking-tight text-white">Round Control Center</h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-400">
+          Locking, timer actions, and duration changes now run through server-validated round actions so the admin panel always refreshes from canonical state.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4">
+          <p className="px-3 pb-3 text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Select Round</p>
+          <div className="space-y-2">
+            {rounds.map((round) => {
+              const isSelected = round.id === activeRound.id;
+              const roundTimerState = getEffectiveTimerState(round);
+
+              return (
+                <button
+                  key={round.id}
+                  onClick={() => setSelectedRoundId(round.id)}
+                  className={cn(
+                    'w-full rounded-2xl border px-4 py-3 text-left transition-colors',
+                    isSelected
+                      ? 'border-primary/40 bg-primary/10'
+                      : 'border-slate-800 bg-slate-900/60 hover:border-slate-700',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">{round.title}</p>
+                      <p className="mt-1 text-[0.62rem] font-mono uppercase tracking-[0.2em] text-slate-400">
+                        {round.status === 'open' ? 'Unlocked' : 'Locked'} / {roundTimerState}
+                      </p>
                     </div>
-                    <h1 className="text-2xl font-extrabold text-slate-900">Round Management</h1>
+                    <div className="rounded-full border border-slate-700 px-2 py-1 text-[0.58rem] font-black uppercase tracking-[0.16em] text-slate-300">
+                      {round.questionCount}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-6">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Selected Round</p>
+                <h2 className="mt-2 text-2xl font-black text-white">{activeRound.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm text-slate-400">{activeRound.description}</p>
+              </div>
+
+              <div className="grid min-w-[280px] gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-slate-500">Round Status</p>
+                  <p className="mt-2 text-lg font-black text-white">{isUnlocked ? 'Unlocked' : 'Locked'}</p>
                 </div>
-                <p className="text-muted-foreground text-sm ml-12">
-                    Control access, dataset links, and content for each investigation round.
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-slate-500">Timer</p>
+                  <p className="mt-2 text-lg font-black capitalize text-white">{effectiveTimerState}</p>
+                  <p className="mt-1 text-xs font-mono text-slate-400">
+                    {remainingMinutes.toString().padStart(2, '0')}:{remainingDisplaySeconds.toString().padStart(2, '0')} remaining
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {actionCards.map((action) => (
+              <button
+                key={action.label}
+                onClick={action.onClick}
+                disabled={action.disabled}
+                className={cn(
+                  'rounded-2xl border p-4 text-left transition-all disabled:cursor-not-allowed disabled:opacity-45',
+                  action.className,
+                )}
+              >
+                <div className="flex items-center gap-2 text-sm font-black text-inherit">
+                  {action.icon}
+                  <span>{action.label}</span>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-inherit/80">{action.description}</p>
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Default Timer Duration</p>
+                <p className="mt-2 text-sm text-slate-400">
+                  This stays the admin-set default and resets the current timer window to the new duration.
                 </p>
+              </div>
+              <div className="flex w-full max-w-md gap-3">
+                <div className="flex-1">
+                  <label className={labelClass}>Minutes</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={timerMinutes}
+                    onChange={(event) => setTimerMinutes(event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <button
+                  onClick={() => void handleRoundAction('set_timer_duration', { timerMinutes: Number(timerMinutes) })}
+                  disabled={!isUnlocked || isRunningAction}
+                  className="inline-flex h-[46px] items-center justify-center gap-2 self-end rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-black text-white transition-colors hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <TimerReset size={16} />
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/60">
+              <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+                <div>
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Round Content</p>
+                  <h3 className="mt-1 text-lg font-black text-white">Narrative and objectives</h3>
+                </div>
+                {!isEditingContent ? (
+                  <button
+                    onClick={beginContentEdit}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-200 transition-colors hover:border-slate-600"
+                  >
+                    <Edit3 size={14} />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingContent(false)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-300"
+                    >
+                      <X size={14} />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void saveContent()}
+                      disabled={isSavingContent}
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-black text-white disabled:opacity-45"
+                    >
+                      <Save size={14} />
+                      {isSavingContent ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-5 p-6">
+                <div>
+                  <label className={labelClass}>Title</label>
+                  {isEditingContent ? (
+                    <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} className={inputClass} />
+                  ) : (
+                    <p className="text-sm text-slate-100">{activeRound.title}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>Description</label>
+                  {isEditingContent ? (
+                    <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} className={cn(inputClass, 'min-h-[90px] resize-y')} />
+                  ) : (
+                    <p className="text-sm leading-relaxed text-slate-300">{activeRound.description || 'No description set.'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>Objective</label>
+                  {isEditingContent ? (
+                    <textarea value={editObjective} onChange={(event) => setEditObjective(event.target.value)} className={cn(inputClass, 'min-h-[90px] resize-y')} />
+                  ) : (
+                    <p className="text-sm leading-relaxed text-slate-300">{activeRound.objective || 'No objective set.'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>Case Brief</label>
+                  {isEditingContent ? (
+                    <textarea value={editCaseBrief} onChange={(event) => setEditCaseBrief(event.target.value)} className={cn(inputClass, 'min-h-[180px] resize-y')} />
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{activeRound.caseBrief || 'No case brief set.'}</p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-6 items-start">
+            <div className="rounded-3xl border border-slate-800 bg-slate-950/60">
+              <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+                <div>
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">ZIP Access</p>
+                  <h3 className="mt-1 text-lg font-black text-white">Offline archive password</h3>
+                </div>
+                {!isEditingPassword ? (
+                  <button
+                    onClick={() => {
+                      setZipPassword(activeRound.zipPassword ?? '');
+                      setIsEditingPassword(true);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-200 transition-colors hover:border-slate-600"
+                  >
+                    <Edit3 size={14} />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingPassword(false)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-black text-slate-300"
+                    >
+                      <X size={14} />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void savePassword()}
+                      disabled={isSavingPassword}
+                      className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-black text-white disabled:opacity-45"
+                    >
+                      <Save size={14} />
+                      {isSavingPassword ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </div>
 
-                {/* Sidebar */}
-                <div className="w-[220px] shrink-0 flex flex-col gap-2">
-                    <p className="text-[0.7rem] font-bold text-slate-400 uppercase tracking-wider mb-1">Select Round</p>
-                    {rounds.map(round => {
-                        const isSelected = resolvedSelectedRoundId === round.id;
-                        return (
-                            <button
-                                key={round.id}
-                                onClick={() => handleSelectRound(round.id)}
-                                className={cn(
-                                    'w-full text-left px-4 py-3 rounded-[10px] text-sm cursor-pointer transition-all duration-150 flex items-center justify-between',
-                                    isSelected
-                                        ? 'border-[1.5px] border-blue-600 bg-blue-50 text-blue-700 font-bold'
-                                        : 'border border-border bg-white text-slate-700 font-medium hover:bg-slate-50'
-                                )}
-                            >
-                                <span className="truncate flex-1">{round.title}</span>
-                                {round.status === 'closed' && <Lock size={12} className="text-slate-400 shrink-0 ml-2" />}
-                            </button>
-                        );
-                    })}
+              <div className="space-y-5 p-6">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <div className="flex items-center gap-2 text-sm font-black text-white">
+                    <Clock3 size={16} className="text-primary" />
+                    <span>Current timer snapshot</span>
+                  </div>
+                  <p className="mt-3 text-sm text-slate-300">
+                    State: <span className="font-black capitalize text-white">{effectiveTimerState}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Remaining: <span className="font-mono text-white">{remainingMinutes.toString().padStart(2, '0')}:{remainingDisplaySeconds.toString().padStart(2, '0')}</span>
+                  </p>
                 </div>
 
-                {/* Main */}
-                <div className="flex-1 flex flex-col gap-4">
-
-                    {/* Status Toggle Header */}
-                    <div className="bg-slate-800 border border-slate-700 rounded-[14px] px-6 py-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[0.68rem] text-slate-300 uppercase tracking-widest font-semibold mb-1">Active Round</p>
-                            <h2 className="text-lg font-extrabold text-white">{activeRound.title}</h2>
-                        </div>
-                        <button
-                            onClick={() => void toggleRoundStatus()}
-                            disabled={isSaving}
-                            className={cn(
-                                'flex items-center gap-2 px-4 py-2 rounded-[10px] border-none text-[0.82rem] font-bold text-white cursor-pointer transition-colors duration-150 disabled:opacity-60',
-                                isClosed ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-                            )}
-                        >
-                            {isClosed ? <Lock size={14} /> : <Unlock size={14} />}
-                            {isClosed ? 'Case Closed' : 'Case Open'}
-                        </button>
+                <div>
+                  <label className={labelClass}>ZIP Password</label>
+                  {isEditingPassword ? (
+                    <input
+                      value={zipPassword}
+                      onChange={(event) => setZipPassword(event.target.value)}
+                      placeholder="Enter the ZIP password for this round"
+                      className={inputClass}
+                    />
+                  ) : activeRound.zipPassword ? (
+                    <div className="flex items-center gap-2 break-all rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-200">
+                      <KeyRound size={15} className="shrink-0 text-primary" />
+                      <span className="font-mono tracking-[0.12em]">{activeRound.zipPassword}</span>
                     </div>
-
-                    {/* Round Content Editor */}
-                    <div className="bg-white border border-border rounded-[14px] overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-border bg-slate-50 flex items-center justify-between">
-                            <p className="text-[0.85rem] font-bold text-slate-900">Round Content</p>
-                            {!isEditingContent ? (
-                                <button onClick={handleEditContentClick} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-600 text-[0.78rem] font-semibold cursor-pointer hover:bg-slate-50">
-                                    <Edit3 size={13} /> Edit
-                                </button>
-                            ) : (
-                                <div className="flex gap-2">
-                                    <button onClick={() => setIsEditingContent(false)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-[0.78rem] font-semibold cursor-pointer">
-                                        <X size={13} /> Cancel
-                                    </button>
-                                    <button onClick={() => void handleSaveContent()} disabled={isSaving} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 border-none rounded-lg text-white text-[0.78rem] font-semibold cursor-pointer disabled:opacity-60">
-                                        <Save size={13} /> {isSaving ? 'Saving...' : 'Save'}
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-5 flex flex-col gap-4">
-                            {isEditingContent ? (
-                                <>
-                                    <div>
-                                        <label className={labelClass}>Title</label>
-                                        <input value={editTitle} onChange={e => setEditTitle(e.target.value)} className={inputClass} />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Objective</label>
-                                        <input value={editObjective} onChange={e => setEditObjective(e.target.value)} className={inputClass} />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>Case Brief</label>
-                                        <textarea value={editCaseBrief} onChange={e => setEditCaseBrief(e.target.value)}
-                                            className={cn(inputClass, 'min-h-[100px] resize-y')} />
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className={labelClass}>Timer Minutes</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={editTimerMinutes}
-                                                onChange={e => setEditTimerMinutes(e.target.value)}
-                                                className={inputClass}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Starts At</label>
-                                            <input
-                                                type="datetime-local"
-                                                value={editStartsAt}
-                                                onChange={e => setEditStartsAt(e.target.value)}
-                                                className={inputClass}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className={labelClass}>Ends At</label>
-                                            <input
-                                                type="datetime-local"
-                                                value={editEndsAt}
-                                                onChange={e => setEditEndsAt(e.target.value)}
-                                                className={inputClass}
-                                            />
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div>
-                                        <p className={labelClass}>Title</p>
-                                        <p className="text-[0.9rem] text-slate-900 font-semibold">{activeRound.title}</p>
-                                    </div>
-                                    <div>
-                                        <p className={labelClass}>Objective</p>
-                                        <p className="text-sm text-slate-700">{activeRound.objective}</p>
-                                    </div>
-                                    <div>
-                                        <p className={labelClass}>Case Brief</p>
-                                        <p className="text-sm text-slate-700 leading-relaxed">{activeRound.caseBrief}</p>
-                                    </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div>
-                                            <p className={labelClass}>Timer Minutes</p>
-                                            <p className="text-sm text-slate-700">{activeRound.timerMinutes}</p>
-                                        </div>
-                                        <div>
-                                            <p className={labelClass}>Starts At</p>
-                                            <p className="text-sm text-slate-700">{activeRound.startsAt ? new Date(activeRound.startsAt).toLocaleString() : 'Not set'}</p>
-                                        </div>
-                                        <div>
-                                            <p className={labelClass}>Ends At</p>
-                                            <p className="text-sm text-slate-700">{activeRound.endsAt ? new Date(activeRound.endsAt).toLocaleString() : 'Not set'}</p>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/60 px-4 py-6 text-sm text-slate-400">
+                      No ZIP password configured yet.
                     </div>
-
-                    {/* Dataset Link */}
-                    <div className="bg-white border border-border rounded-[14px] overflow-hidden">
-                        <div className="px-5 py-3.5 border-b border-border bg-slate-50 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <LinkIcon size={15} className="text-violet-600" />
-                                <p className="text-[0.85rem] font-bold text-slate-900">Dataset Link</p>
-                            </div>
-                            {!isEditingLink && (
-                                <button onClick={handleEditLinkClick} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-600 text-[0.78rem] font-semibold cursor-pointer hover:bg-slate-50">
-                                    <Edit3 size={13} /> Edit
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="p-5">
-                            {isEditingLink ? (
-                                <div className="flex flex-col gap-3">
-                                    <div>
-                                        <label className={labelClass}>Download URL</label>
-                                        <input
-                                            value={datasetLink}
-                                            onChange={e => setDatasetLink(e.target.value)}
-                                            placeholder="https://example.com/dataset.csv"
-                                            className={cn(inputClass, 'font-mono text-[0.8rem]')}
-                                        />
-                                    </div>
-                                    <div className="flex gap-2 justify-end">
-                                        <button onClick={() => setIsEditingLink(false)} className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-500 text-[0.82rem] font-semibold cursor-pointer">
-                                            <X size={13} /> Cancel
-                                        </button>
-                                        <button onClick={handleSaveLink} className="flex items-center gap-1.5 px-4 py-1.5 bg-violet-600 border-none rounded-lg text-white text-[0.82rem] font-semibold cursor-pointer hover:bg-violet-700">
-                                            <Save size={13} /> Save Link
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : activeRound.datasetLink ? (
-                                <a
-                                    href={activeRound.datasetLink}
-                                    target="_blank" rel="noopener noreferrer"
-                                    className="block text-[0.82rem] font-mono text-violet-600 bg-violet-50 border border-violet-200 rounded-[10px] px-4 py-3 break-all no-underline hover:bg-violet-100 transition-colors"
-                                >
-                                    {activeRound.datasetLink}
-                                </a>
-                            ) : (
-                                <div className="text-center p-6 text-amber-700 bg-amber-50 border border-dashed border-amber-200 rounded-[10px] text-[0.85rem] font-semibold">
-                                    No dataset link configured yet
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
+                  )}
                 </div>
+              </div>
             </div>
-        </motion.div>
-    );
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
 };

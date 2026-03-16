@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { ArrowLeft, ArrowRight, ShieldCheck, FileSearch, Notebook } from 'lucide-react';
+import { canAccessRoundRoute } from '../../lib/roundState';
 
 export const RoundDocsPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -23,14 +24,12 @@ export const RoundDocsPage: React.FC = () => {
         return <div className="container p-20 text-center"><p className="case-label">Reference Material Not Found</p></div>;
     }
 
-    if (!unlockedRounds.includes(round.id)) {
-        navigate('/dashboard', { replace: true });
-        return null;
+    if (progress?.status === 'submitted') {
+        return <Navigate to={`/round/${round.id}/submitted`} replace />;
     }
 
-    if (progress?.status === 'submitted') {
-        navigate(`/round/${round.id}/submitted`, { replace: true });
-        return null;
+    if (!canAccessRoundRoute(progress?.status ?? 'locked') || !unlockedRounds.includes(round.id) || !round.contentVisible) {
+        return <Navigate to="/dashboard" replace />;
     }
 
     return (

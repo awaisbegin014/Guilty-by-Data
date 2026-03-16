@@ -43,7 +43,7 @@ export const CompetitionCompletePage: React.FC = () => {
                                 Commendable work, <span className="font-black text-primary uppercase">{team?.name || 'Investigator'}</span>.
                             </p>
                             <p className="text-sm text-muted-foreground leading-relaxed max-w-[440px] mx-auto font-medium">
-                                Your comprehensive analysis of the Ashworth datasets has been finalized. 
+                                Your comprehensive analysis of the Ashworth evidence files has been finalized. 
                                 The executive board has received your findings for deliberation.
                             </p>
                         </div>

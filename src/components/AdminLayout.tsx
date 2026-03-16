@@ -69,7 +69,7 @@ export const AdminLayout: React.FC = () => {
             </header>
 
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto p-8 bg-muted/30">
+            <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(74,124,157,0.12),_transparent_32%),linear-gradient(180deg,_rgba(10,12,14,0.98),_rgba(13,15,17,1))] p-8">
                 <div className="container max-w-7xl mx-auto">
                     <Outlet />
                 </div>

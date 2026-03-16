@@ -1,17 +1,23 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
-import { Database, ArrowRight, ShieldAlert, Download, Briefcase } from 'lucide-react';
+import { KeyRound, ArrowRight, ShieldAlert, Copy, Briefcase } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
+import { canAccessRoundRoute } from '../../lib/roundState';
 
 export const RoundOverviewPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
-    const { roundsProgress, rounds, unlockedRounds, markDatasetOpened } = useAppStore();
+    const { roundsProgress, rounds, unlockedRounds, markResourceViewed } = useAppStore();
+    const [copyState, setCopyState] = useState<{ roundId: string | null; status: 'idle' | 'copied' | 'error' }>({
+        roundId: null,
+        status: 'idle',
+    });
 
     const round = rounds.find(r => r.id === roundId);
+    const visibleCopyState = copyState.roundId === roundId ? copyState.status : 'idle';
 
     if (!round) {
         return <div className="container p-20 text-center"><p className="case-label">Error: File Not Found</p></div>;
@@ -20,21 +26,26 @@ export const RoundOverviewPage: React.FC = () => {
     const progress = roundsProgress[round.id];
 
     if (progress?.status === 'submitted') {
-        navigate(`/round/${round.id}/submitted`, { replace: true });
-        return null;
+        return <Navigate to={`/round/${round.id}/submitted`} replace />;
     }
 
-    if (!unlockedRounds.includes(round.id)) {
-        navigate('/dashboard', { replace: true });
-        return null;
+    if (!canAccessRoundRoute(progress?.status ?? 'locked') || !unlockedRounds.includes(round.id) || !round.contentVisible) {
+        return <Navigate to="/dashboard" replace />;
     }
 
-    const handleDatasetAccess = () => {
-        markDatasetOpened(round.id);
-        if (round.datasetVisible && round.datasetLink) {
-            window.open(round.datasetLink, '_blank', 'noopener,noreferrer');
-        } else {
-            alert('SYSTEM_MSG: Dataset access is not currently available for this round.');
+    const handleCopyPassword = async () => {
+        markResourceViewed(round.id);
+
+        if (!round.zipPassword) {
+            setCopyState({ roundId: round.id, status: 'error' });
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(round.zipPassword);
+            setCopyState({ roundId: round.id, status: 'copied' });
+        } catch {
+            setCopyState({ roundId: round.id, status: 'error' });
         }
     };
 
@@ -49,7 +60,7 @@ export const RoundOverviewPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                          <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_8px_rgba(74,124,157,0.4)]" />
                          <span className="text-[0.7rem] font-black font-mono text-white/90 uppercase tracking-[0.3em]">
-                            Investigation Registry // Phase 0{round.id.at(-1)}
+                            Investigation Registry // Phase {String(round.orderIndex + 1).padStart(2, '0')}
                          </span>
                     </div>
                     <div>
@@ -115,23 +126,34 @@ export const RoundOverviewPage: React.FC = () => {
                                 </Button>
                             </div>
 
-                            {/* Dataset Row */}
+                            {/* ZIP Password Row */}
                             <div className="p-8 rounded-xl bg-slate-900/40 border border-border/40 flex items-center gap-8 group transition-all duration-300 hover:border-primary/20 hover:bg-slate-900/60">
                                 <div className="w-14 h-14 rounded-lg bg-secondary border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                    <Database size={24} />
+                                    <KeyRound size={24} />
                                 </div>
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-1">
-                                        <h5 className="text-sm font-black text-white uppercase tracking-tight">Access Case Evidence</h5>
-                                        <Badge variant="outline" className="text-[0.55rem] font-black tracking-widest bg-primary/5 border-primary/20">DATASET</Badge>
+                                        <h5 className="text-sm font-black text-white uppercase tracking-tight">ZIP Archive Password</h5>
+                                        <Badge variant="outline" className="text-[0.55rem] font-black tracking-widest bg-primary/5 border-primary/20">PASSWORD</Badge>
                                     </div>
-                                    <p className="text-xs text-muted-foreground leading-relaxed font-medium line-clamp-1 max-w-md">
-                                        Download available forensic logs and financial datasets for analysis.
-                                    </p>
+                                    {round.zipPassword ? (
+                                        <>
+                                            <p className="text-sm text-slate-100 font-mono tracking-[0.15em] uppercase break-all">
+                                                {round.zipPassword}
+                                            </p>
+                                            <p className="mt-2 text-xs text-muted-foreground leading-relaxed font-medium max-w-md">
+                                                Use this password to open the offline ZIP package for this round.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground leading-relaxed font-medium max-w-md">
+                                            No ZIP password has been configured for this round yet.
+                                        </p>
+                                    )}
                                 </div>
-                                <Button variant="secondary" size="sm" className="h-10 px-6 rounded-lg font-black uppercase tracking-widest text-[0.6rem]" onClick={handleDatasetAccess}>
-                                    <Download size={14} className="mr-2" />
-                                    <span>Access File</span>
+                                <Button variant="secondary" size="sm" className="h-10 px-6 rounded-lg font-black uppercase tracking-widest text-[0.6rem]" onClick={() => void handleCopyPassword()}>
+                                    <Copy size={14} className="mr-2" />
+                                    <span>{visibleCopyState === 'copied' ? 'Copied' : 'Copy Password'}</span>
                                 </Button>
                             </div>
 

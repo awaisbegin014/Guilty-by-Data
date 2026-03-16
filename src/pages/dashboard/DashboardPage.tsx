@@ -13,7 +13,7 @@ export const DashboardPage: React.FC = () => {
     const completedRounds = Object.values(roundsProgress).filter((p) => p.status === 'submitted').length;
     const nextAvailableRound = rounds.find((round) => {
         const progress = roundsProgress[round.id];
-        return unlockedRounds.includes(round.id) && progress?.status !== 'submitted';
+        return unlockedRounds.includes(round.id) && (progress?.status === 'available' || progress?.status === 'in_progress');
     });
 
     return (
@@ -132,7 +132,7 @@ export const DashboardPage: React.FC = () => {
                                         key={round.id}
                                         round={round}
                                         progress={progress}
-                                        isLocked={!isUnlocked}
+                                        isLocked={!isUnlocked && progress?.status === 'locked'}
                                     />
                                 );
                             })}

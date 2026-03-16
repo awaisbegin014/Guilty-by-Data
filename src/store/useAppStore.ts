@@ -3,10 +3,10 @@ import { persist } from 'zustand/middleware';
 import {
   deleteQuestion as deleteQuestionRequest,
   fetchAdminRounds,
+  fetchParticipantBundle,
   fetchLeaderboard,
-  fetchParticipantRounds,
-  fetchTeamSubmissions,
   resolveSession,
+  runAdminRoundAction as runAdminRoundActionRequest,
   saveQuestion as saveQuestionRequest,
   signInAdmin,
   signInTeam,
@@ -15,6 +15,7 @@ import {
   updateRound as updateRoundRequest,
 } from '../lib/appApi';
 import { competitionConfig } from '../config/competitionConfig';
+import { deriveParticipantRoundStatus, isRoundPlayable } from '../lib/roundState';
 import type {
   AdminUser,
   LeaderboardEntry,
@@ -28,7 +29,15 @@ import type {
 interface DraftRoundProgress {
   answers: Record<string, string>;
   docsVisited: boolean;
-  datasetOpened: boolean;
+  resourceViewed: boolean;
+}
+
+function createEmptyDraftProgress(): DraftRoundProgress {
+  return {
+    answers: {},
+    docsVisited: false,
+    resourceViewed: false,
+  };
 }
 
 interface AppState {
@@ -54,33 +63,18 @@ interface AppState {
   refreshLeaderboard: () => Promise<void>;
   setAnswer: (roundId: string, questionId: string, optionId: string) => void;
   markDocsVisited: (roundId: string) => void;
-  markDatasetOpened: (roundId: string) => void;
+  markResourceViewed: (roundId: string) => void;
   submitRound: (roundId: string) => Promise<void>;
   updateRound: (roundId: string, updates: Partial<Round>) => Promise<void>;
+  runAdminRoundAction: (
+    roundId: string,
+    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+    payload?: { timerMinutes?: number },
+  ) => Promise<void>;
   saveQuestion: (roundId: string, question: Question) => Promise<void>;
   deleteQuestion: (questionId: string) => Promise<void>;
   clearError: () => void;
   resetLocalDrafts: () => void;
-}
-
-function isRoundCurrentlyActive(round: Round) {
-  if (round.status !== 'open') {
-    return false;
-  }
-
-  const now = Date.now();
-  const startsAt = round.startsAt ? new Date(round.startsAt).getTime() : null;
-  const endsAt = round.endsAt ? new Date(round.endsAt).getTime() : null;
-
-  if (startsAt && now < startsAt) {
-    return false;
-  }
-
-  if (endsAt && now > endsAt) {
-    return false;
-  }
-
-  return true;
 }
 
 function buildParticipantState(
@@ -92,17 +86,21 @@ function buildParticipantState(
   const unlockedRounds: string[] = [];
   const roundsProgress: Record<string, RoundProgress> = {};
   let previousRoundsSubmitted = true;
+  const now = Date.now();
 
   for (const round of sortedRounds) {
-    const draft = drafts[round.id] ?? {
-      answers: {},
-      docsVisited: false,
-      datasetOpened: false,
-    };
+    const draft = drafts[round.id] ?? createEmptyDraftProgress();
     const submission = submissionsByRound[round.id];
-    const active = isRoundCurrentlyActive(round);
     const sequentiallyAvailable = !competitionConfig.sequentialRoundUnlock || previousRoundsSubmitted;
-    const unlocked = Boolean(submission) || (active && sequentiallyAvailable);
+    const hasDraftActivity = Object.keys(draft.answers).length > 0 || draft.docsVisited || draft.resourceViewed;
+    const status = deriveParticipantRoundStatus({
+      round,
+      sequentiallyAvailable,
+      submission,
+      hasDraftActivity,
+      now,
+    });
+    const unlocked = isRoundPlayable(round, sequentiallyAvailable, now);
 
     if (unlocked) {
       unlockedRounds.push(round.id);
@@ -110,17 +108,11 @@ function buildParticipantState(
 
     roundsProgress[round.id] = {
       roundId: round.id,
-      status: submission
-        ? 'submitted'
-        : unlocked
-          ? Object.keys(draft.answers).length > 0 || draft.docsVisited || draft.datasetOpened
-            ? 'in_progress'
-            : 'available'
-          : 'locked',
+      status,
       answers: draft.answers,
       submittedAt: submission?.submittedAt ?? null,
       docsVisited: draft.docsVisited,
-      datasetOpened: draft.datasetOpened,
+      resourceViewed: draft.resourceViewed,
     };
 
     previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
@@ -138,17 +130,13 @@ function withParticipantState(
   return buildParticipantState(state.rounds, state.draftProgressByRound, state.submissionsByRound);
 }
 
-async function loadParticipantBundle(team: Team) {
-  const [rounds, submissionsByRound, leaderboard] = await Promise.all([
-    fetchParticipantRounds(),
-    fetchTeamSubmissions(team.id),
-    fetchLeaderboard(),
-  ]);
-
+async function loadParticipantBundle() {
+  const bundle = await fetchParticipantBundle();
   return {
-    rounds,
-    submissionsByRound,
-    leaderboard,
+    team: bundle.team,
+    rounds: bundle.rounds,
+    submissionsByRound: bundle.submissionsByRound,
+    leaderboard: bundle.leaderboard,
   };
 }
 
@@ -183,11 +171,11 @@ export const useAppStore = create<AppState>()(
           const session = await resolveSession();
 
           if (session.role === 'team' && session.team) {
-            const participantBundle = await loadParticipantBundle(session.team);
+            const participantBundle = await loadParticipantBundle();
             set((state) => ({
               authReady: true,
               isBootstrapping: false,
-              team: session.team,
+              team: participantBundle.team,
               admin: null,
               isAdmin: false,
               rounds: participantBundle.rounds,
@@ -255,13 +243,13 @@ export const useAppStore = create<AppState>()(
         });
 
         try {
-          const team = await signInTeam(identifier, password);
-          const participantBundle = await loadParticipantBundle(team);
+          await signInTeam(identifier, password);
+          const participantBundle = await loadParticipantBundle();
 
           set((state) => ({
             authReady: true,
             isBootstrapping: false,
-            team,
+            team: participantBundle.team,
             admin: null,
             isAdmin: false,
             rounds: participantBundle.rounds,
@@ -336,8 +324,9 @@ export const useAppStore = create<AppState>()(
           return;
         }
 
-        const participantBundle = await loadParticipantBundle(team);
+        const participantBundle = await loadParticipantBundle();
         set((state) => ({
+          team: participantBundle.team,
           rounds: participantBundle.rounds,
           leaderboard: participantBundle.leaderboard,
           submissionsByRound: participantBundle.submissionsByRound,
@@ -361,11 +350,7 @@ export const useAppStore = create<AppState>()(
 
       setAnswer: (roundId, questionId, optionId) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? {
-            answers: {},
-            docsVisited: false,
-            datasetOpened: false,
-          };
+          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
 
           const draftProgressByRound = {
             ...state.draftProgressByRound,
@@ -387,11 +372,7 @@ export const useAppStore = create<AppState>()(
 
       markDocsVisited: (roundId) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? {
-            answers: {},
-            docsVisited: false,
-            datasetOpened: false,
-          };
+          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
           const draftProgressByRound = {
             ...state.draftProgressByRound,
             [roundId]: {
@@ -407,18 +388,14 @@ export const useAppStore = create<AppState>()(
         });
       },
 
-      markDatasetOpened: (roundId) => {
+      markResourceViewed: (roundId) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? {
-            answers: {},
-            docsVisited: false,
-            datasetOpened: false,
-          };
+          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
           const draftProgressByRound = {
             ...state.draftProgressByRound,
             [roundId]: {
               ...existing,
-              datasetOpened: true,
+              resourceViewed: true,
             },
           };
 
@@ -472,6 +449,20 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Round update failed.',
+          });
+          throw error;
+        }
+      },
+
+      runAdminRoundAction: async (roundId, action, payload) => {
+        set({ error: null });
+
+        try {
+          await runAdminRoundActionRequest(roundId, action, payload);
+          await get().refreshAdminData();
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Round action failed.',
           });
           throw error;
         }

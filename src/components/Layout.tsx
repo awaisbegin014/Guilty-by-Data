@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { UserCircle, Trophy, LogOut, Database } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { formatParticipantIdentifier } from '../lib/teamIdentity';
 
 export const Layout: React.FC = () => {
     const { team, logout } = useAppStore();
@@ -42,7 +43,9 @@ export const Layout: React.FC = () => {
                         <div className="flex items-center gap-4">
                             <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-md bg-secondary border border-border">
                                 <UserCircle size={14} className="text-muted-foreground" />
-                                <span className="text-[0.65rem] font-black text-foreground font-mono uppercase tracking-wider">{team.name}</span>
+                                <span className="text-[0.65rem] font-black text-foreground font-mono uppercase tracking-wider">
+                                    {formatParticipantIdentifier(team.username || team.email || team.name)}
+                                </span>
                             </div>
 
                             <div className="w-px h-5 bg-border mx-1" />

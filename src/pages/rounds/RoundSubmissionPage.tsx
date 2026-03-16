@@ -99,7 +99,7 @@ export const RoundSubmissionPage: React.FC = () => {
 
                 <div className="mt-3 text-center">
                     <p className="text-[0.5rem] text-muted-foreground font-bold uppercase tracking-[0.3em]">
-                        System Log: Round_{round.id.at(-1)}_Verified
+                        System Log: Round_{String(round.orderIndex + 1).padStart(2, '0')}_Verified
                     </p>
                 </div>
             </div>
