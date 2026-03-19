@@ -9,14 +9,22 @@ interface TimerBannerProps {
 }
 
 export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
-    const { rounds, roundsProgress, refreshParticipantData } = useAppStore();
+    const { rounds, roundsProgress, recomputeParticipantState, serverTimeOffsetMs } = useAppStore();
     const progress = roundsProgress[roundId];
     const round = rounds.find((item) => item.id === roundId);
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(() => Date.now() + serverTimeOffsetMs);
     const timerState = round ? getEffectiveTimerState(round, now) : null;
     const timeLeftSeconds = timerState === 'running' && round?.endsAt
         ? Math.max(0, Math.floor((new Date(round.endsAt).getTime() - now) / 1000))
         : round?.timerRemainingSeconds ?? null;
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setNow(Date.now() + serverTimeOffsetMs);
+        }, 0);
+
+        return () => window.clearTimeout(timeout);
+    }, [round?.endsAt, round?.timerState, serverTimeOffsetMs]);
 
     useEffect(() => {
         if (!round || progress?.status === 'submitted') {
@@ -24,20 +32,20 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         }
 
         const interval = setInterval(() => {
-            const nextNow = Date.now();
+            const nextNow = Date.now() + serverTimeOffsetMs;
             setNow(nextNow);
 
             if (round.endsAt && round.timerState === 'running') {
                 const nextTime = Math.max(0, new Date(round.endsAt).getTime() - nextNow);
                 if (nextTime === 0) {
                     clearInterval(interval);
-                    void refreshParticipantData();
+                    recomputeParticipantState();
                 }
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [progress?.status, refreshParticipantData, round, roundId]);
+    }, [progress?.status, recomputeParticipantState, round, roundId, serverTimeOffsetMs]);
 
     if (progress?.status === 'submitted' || !round) {
         return null;

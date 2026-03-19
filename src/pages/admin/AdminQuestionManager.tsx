@@ -13,14 +13,23 @@ function buildNewQuestion(roundId: string, questionIndex: number): Question {
         text: 'New Question',
         correctOptionId: `${newId}-a`,
         options: [
-            { id: `${newId}-a`, text: 'Option A' },
-            { id: `${newId}-b`, text: 'Option B' },
-            { id: `${newId}-c`, text: 'Option C' },
-            { id: `${newId}-d`, text: 'Option D' },
+            { id: `${newId}-a`, text: 'Option A', score: 1 },
+            { id: `${newId}-b`, text: 'Option B', score: 0 },
+            { id: `${newId}-c`, text: 'Option C', score: 0 },
+            { id: `${newId}-d`, text: 'Option D', score: 0 },
         ],
         type: 'mcq',
         inputType: null,
     };
+}
+
+function parseScoreInput(value: string) {
+    if (!value.trim()) {
+        return 0;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export const AdminQuestionManager: React.FC = () => {
@@ -177,7 +186,7 @@ export const AdminQuestionManager: React.FC = () => {
                                         </div>
 
                                         <div className="space-y-3">
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Options (Select the correct one)</label>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Options (Select the correct one and assign points)</label>
                                             {editForm.options?.map((option, idx) => (
                                                 <div key={option.id} className="flex items-center gap-3">
                                                     <button
@@ -198,6 +207,22 @@ export const AdminQuestionManager: React.FC = () => {
                                                             setEditForm({ ...editForm, options });
                                                         }}
                                                     />
+                                                    <div className="w-[110px] shrink-0">
+                                                        <input
+                                                            type="number"
+                                                            step="0.25"
+                                                            className="w-full px-3.5 py-2 border border-slate-700 rounded-[10px] text-sm text-slate-100 bg-slate-950 outline-none focus:border-primary"
+                                                            value={option.score}
+                                                            onChange={(event) => {
+                                                                const options = [...(editForm.options || [])];
+                                                                options[idx] = { ...options[idx], score: parseScoreInput(event.target.value) };
+                                                                setEditForm({ ...editForm, options });
+                                                            }}
+                                                        />
+                                                        <p className="mt-1 text-[0.6rem] font-bold uppercase tracking-wider text-slate-500">
+                                                            Points
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -238,9 +263,21 @@ export const AdminQuestionManager: React.FC = () => {
                                                 )}>
                                                     {String.fromCharCode(65 + idx)}
                                                 </div>
-                                                <span className={cn("text-xs font-medium", isCorrect ? "text-green-100" : "text-slate-300")}>
-                                                    {option.text}
-                                                </span>
+                                                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                                                    <span className={cn("text-xs font-medium", isCorrect ? "text-green-100" : "text-slate-300")}>
+                                                        {option.text}
+                                                    </span>
+                                                    <span className={cn(
+                                                        "shrink-0 rounded-full border px-2 py-1 text-[0.6rem] font-black uppercase tracking-wider",
+                                                        option.score > 0
+                                                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                                                            : option.score < 0
+                                                                ? "border-red-500/30 bg-red-500/10 text-red-200"
+                                                                : "border-slate-700 bg-slate-950 text-slate-400"
+                                                    )}>
+                                                        {option.score > 0 ? `+${option.score}` : option.score} pts
+                                                    </span>
+                                                </div>
                                             </div>
                                         );
                                     })}

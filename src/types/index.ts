@@ -14,6 +14,8 @@ export interface AdminUser {
 export interface Option {
   id: string;
   text: string;
+  score: number;
+  orderIndex?: number;
 }
 
 export interface Question {
@@ -56,6 +58,7 @@ export interface RoundProgress {
   status: 'locked' | 'not_started' | 'available' | 'in_progress' | 'paused' | 'expired' | 'submitted';
   answers: Record<string, string>; // questionId -> optionId
   submittedAt: string | null;
+  timeTakenSeconds: number | null;
   docsVisited: boolean;
   resourceViewed: boolean;
 }
@@ -69,6 +72,7 @@ export interface LeaderboardEntry {
   round2Score: number;
   round3Score: number;
   totalScore: number;
+  totalTimeSeconds: number | null;
   updatedAt: string;
 }
 
@@ -82,5 +86,6 @@ export interface RoundSubmission {
   roundId: string;
   submittedAt: string;
   totalScore: number | null;
+  timeTakenSeconds: number | null;
   status: 'accepted' | 'rejected';
 }

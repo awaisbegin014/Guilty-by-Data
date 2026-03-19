@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { Layout } from './components/Layout';
@@ -43,8 +44,22 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 };
 
 const AppRoutes: React.FC = () => {
-  const { authReady, bootstrapApp, team, refreshParticipantData } = useAppStore();
-  const location = useLocation();
+  const {
+    authReady,
+    bootstrapApp,
+    team,
+    isAdmin,
+    refreshParticipantData,
+    syncServerClock,
+    syncCorrectAnswerRecord,
+    syncLeaderboardRecord,
+    syncOptionRecord,
+    syncQuestionRecord,
+    syncRoundPublicState,
+    syncRoundRecord,
+    syncSubmissionRecord,
+  } = useAppStore();
+  const lastParticipantRefreshRef = useRef(0);
 
   useEffect(() => {
     void bootstrapApp();
@@ -55,15 +70,17 @@ const AppRoutes: React.FC = () => {
       return;
     }
 
-    void refreshParticipantData();
-  }, [location.pathname, refreshParticipantData, team]);
-
-  useEffect(() => {
-    if (!team) {
-      return;
-    }
-
     const handleFocusRefresh = () => {
+      if (document.visibilityState === 'hidden') {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastParticipantRefreshRef.current < 5000) {
+        return;
+      }
+
+      lastParticipantRefreshRef.current = now;
       void refreshParticipantData();
     };
 
@@ -77,40 +94,161 @@ const AppRoutes: React.FC = () => {
   }, [refreshParticipantData, team]);
 
   useEffect(() => {
-    if (!team || !supabase) {
+    if ((!team && !isAdmin) || !supabase) {
       return;
     }
 
     const client = supabase;
-    const channel = client
-      .channel(`participant-sync:${team.id}`)
+    const getSyncRow = <TRow extends Record<string, unknown>>(
+      payload: RealtimePostgresChangesPayload<TRow>,
+    ) => (payload.eventType === 'DELETE' ? payload.old : payload.new) as TRow;
+
+    const handleRoundPublicState = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.round_id) {
+        return;
+      }
+
+      syncRoundPublicState(row as unknown as Parameters<typeof syncRoundPublicState>[0]);
+    };
+
+    const handleLeaderboard = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.team_id) {
+        return;
+      }
+
+      syncLeaderboardRecord(payload.eventType, row as unknown as Parameters<typeof syncLeaderboardRecord>[1]);
+    };
+
+    const handleSubmission = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.round_id) {
+        return;
+      }
+
+      syncSubmissionRecord(payload.eventType, row as unknown as Parameters<typeof syncSubmissionRecord>[1]);
+    };
+
+    const handleRoundRecord = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.id) {
+        return;
+      }
+
+      syncRoundRecord(payload.eventType, row as unknown as Parameters<typeof syncRoundRecord>[1]);
+    };
+
+    const handleQuestionRecord = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.id) {
+        return;
+      }
+
+      syncQuestionRecord(payload.eventType, row as unknown as Parameters<typeof syncQuestionRecord>[1]);
+    };
+
+    const handleOptionRecord = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.id) {
+        return;
+      }
+
+      syncOptionRecord(payload.eventType, row as unknown as Parameters<typeof syncOptionRecord>[1]);
+    };
+
+    const handleCorrectAnswerRecord = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.question_id) {
+        return;
+      }
+
+      syncCorrectAnswerRecord(payload.eventType, row as unknown as Parameters<typeof syncCorrectAnswerRecord>[1]);
+    };
+
+    let channel = client
+      .channel(`app-sync:${team?.id ?? 'admin'}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'round_public_state' },
-        () => {
-          void refreshParticipantData();
-        },
+        handleRoundPublicState,
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leaderboard' },
-        () => {
-          void refreshParticipantData();
-        },
-      )
-      .on(
+        handleLeaderboard,
+      );
+
+    if (team) {
+      channel = channel.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'submissions', filter: `team_id=eq.${team.id}` },
-        () => {
-          void refreshParticipantData();
-        },
-      )
-      .subscribe();
+        handleSubmission,
+      );
+    }
+
+    if (isAdmin) {
+      channel
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'rounds' },
+          handleRoundRecord,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'questions' },
+          handleQuestionRecord,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'options' },
+          handleOptionRecord,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'correct_answers' },
+          handleCorrectAnswerRecord,
+        );
+    }
+
+    channel.subscribe();
 
     return () => {
       void client.removeChannel(channel);
     };
-  }, [refreshParticipantData, team]);
+  }, [
+    isAdmin,
+    syncServerClock,
+    syncCorrectAnswerRecord,
+    syncLeaderboardRecord,
+    syncOptionRecord,
+    syncQuestionRecord,
+    syncRoundPublicState,
+    syncRoundRecord,
+    syncSubmissionRecord,
+    team,
+  ]);
 
   if (!authReady) {
     return (

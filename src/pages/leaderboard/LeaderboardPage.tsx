@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store/useAppStore';
 import { Button } from '../../components/ui/Button';
@@ -6,8 +6,8 @@ import { Trophy, ArrowLeft, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatParticipantIdentifier } from '../../lib/teamIdentity';
 
-const formatTimeAgo = (timestamp: string) => {
-    const diff = Date.now() - new Date(timestamp).getTime();
+const formatTimeAgo = (timestamp: string, now: number) => {
+    const diff = Math.max(0, now - new Date(timestamp).getTime());
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
@@ -15,9 +15,37 @@ const formatTimeAgo = (timestamp: string) => {
     return `${Math.floor(hrs / 24)}d ago`;
 };
 
+const formatDuration = (seconds: number | null | undefined) => {
+    if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) {
+        return '--';
+    }
+
+    const safeSeconds = Math.max(0, seconds);
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = safeSeconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
+
 export const LeaderboardPage: React.FC = () => {
-    const { team, leaderboard } = useAppStore();
+    const { team, leaderboard, serverTimeOffsetMs } = useAppStore();
     const navigate = useNavigate();
+    const [now, setNow] = useState(() => Date.now() + serverTimeOffsetMs);
+
+    useEffect(() => {
+        const timeout = window.setTimeout(() => {
+            setNow(Date.now() + serverTimeOffsetMs);
+        }, 0);
+
+        return () => window.clearTimeout(timeout);
+    }, [serverTimeOffsetMs]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNow(Date.now() + serverTimeOffsetMs);
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [serverTimeOffsetMs]);
 
     return (
         <div className="pt-8 pb-20">
@@ -48,8 +76,8 @@ export const LeaderboardPage: React.FC = () => {
                 {/* Standings Table/List */}
                 <div className="dossier-card rounded-2xl overflow-hidden shadow-2xl">
                     {/* Header Columns */}
-                    <div className="grid grid-cols-[80px_1fr_100px_100px_100px_120px_120px] bg-slate-900/60 border-b border-border px-8 py-5">
-                        {['Rank', 'Designation', 'R1', 'R2', 'R3', 'Total', 'Updated'].map((h, i) => (
+                    <div className="grid grid-cols-[80px_minmax(220px,1fr)_90px_90px_90px_110px_110px_110px] bg-slate-900/60 border-b border-border px-8 py-5">
+                        {['Rank', 'Designation', 'R1', 'R2', 'R3', 'Total', 'Time', 'Updated'].map((h, i) => (
                             <div key={i} className={cn(
                                 'text-[0.6rem] font-black text-muted-foreground uppercase tracking-[0.2em] font-mono',
                                 i >= 2 && 'text-center'
@@ -69,7 +97,7 @@ export const LeaderboardPage: React.FC = () => {
                                 <div
                                     key={entry.teamId}
                                     className={cn(
-                                        'grid grid-cols-[80px_1fr_100px_100px_100px_120px_120px] px-8 py-6 items-center transition-all group',
+                                        'grid grid-cols-[80px_minmax(220px,1fr)_90px_90px_90px_110px_110px_110px] px-8 py-6 items-center gap-2 transition-all group',
                                         isCurrentTeam ? 'bg-primary/5' : 'hover:bg-slate-900/30'
                                     )}
                                 >
@@ -114,10 +142,16 @@ export const LeaderboardPage: React.FC = () => {
                                         </div>
                                     ))}
 
+                                    <div className="text-center">
+                                        <span className="text-sm font-black font-mono tracking-tight text-slate-200">
+                                            {formatDuration(entry.totalTimeSeconds)}
+                                        </span>
+                                    </div>
+
                                     <div className="flex flex-col items-end gap-1">
                                         <div className="flex items-center gap-1.5 text-[0.65rem] font-mono font-black text-muted-foreground uppercase tracking-widest">
                                             <Clock size={12} />
-                                            <span>{formatTimeAgo(entry.updatedAt)}</span>
+                                            <span>{formatTimeAgo(entry.updatedAt, now)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -129,6 +163,9 @@ export const LeaderboardPage: React.FC = () => {
                 {/* Footer Notes */}
                 <div className="mt-12 flex flex-col items-center gap-4 text-center">
                     <p className="case-label opacity-30">Investigation Registry v2.4a</p>
+                    <p className="text-[0.58rem] font-mono font-black uppercase tracking-[0.24em] text-slate-500">
+                        Tie-break: higher score first, lower total time second
+                    </p>
                     <div className="flex items-center gap-6">
                          <div className="flex items-center gap-2">
                              <div className="w-2 h-2 rounded-full bg-primary" />

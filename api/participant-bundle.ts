@@ -20,6 +20,19 @@ interface RoundRow {
   documentation: unknown;
 }
 
+interface RoundPublicStateRow {
+  round_id: string;
+  order_index: number;
+  title: string;
+  description: string | null;
+  status: 'draft' | 'open' | 'closed';
+  timer_minutes: number;
+  timer_state: 'idle' | 'running' | 'paused' | 'expired';
+  starts_at: string | null;
+  ends_at: string | null;
+  timer_remaining_seconds: number | null;
+}
+
 interface QuestionRow {
   id: string;
   round_id: string;
@@ -40,6 +53,7 @@ interface SubmissionRow {
   id: string;
   round_id: string;
   submitted_at: string;
+  time_taken_seconds: number;
   total_score: number | null;
   status: 'accepted' | 'rejected';
 }
@@ -52,6 +66,7 @@ interface LeaderboardRow {
   round_2_score: number;
   round_3_score: number;
   total_score: number;
+  total_time_seconds: number;
   updated_at: string;
 }
 
@@ -103,6 +118,7 @@ export default async function handler(request: NodeRequest, response: NodeRespon
 
   const [
     roundsResult,
+    roundPublicStateResult,
     questionsResult,
     optionsResult,
     submissionsResult,
@@ -111,6 +127,10 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     auth.supabase
       .from('rounds')
       .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, starts_at, ends_at, documentation')
+      .order('order_index', { ascending: true }),
+    auth.supabase
+      .from('round_public_state')
+      .select('round_id, order_index, title, description, status, timer_minutes, timer_state, starts_at, ends_at, timer_remaining_seconds')
       .order('order_index', { ascending: true }),
     auth.supabase
       .from('questions')
@@ -122,18 +142,20 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       .order('order_index', { ascending: true }),
     auth.supabase
       .from('submissions')
-      .select('id, round_id, submitted_at, total_score, status')
+      .select('id, round_id, submitted_at, time_taken_seconds, total_score, status')
       .eq('team_id', auth.user.id),
     auth.supabase
       .from('leaderboard')
-      .select('team_id, team_name, username, round_1_score, round_2_score, round_3_score, total_score, updated_at')
+      .select('team_id, team_name, username, round_1_score, round_2_score, round_3_score, total_score, total_time_seconds, updated_at')
       .order('total_score', { ascending: false })
+      .order('total_time_seconds', { ascending: true, nullsFirst: false })
       .order('updated_at', { ascending: true }),
   ]);
 
-  if (roundsResult.error || questionsResult.error || optionsResult.error || submissionsResult.error || leaderboardResult.error) {
+  if (roundsResult.error || roundPublicStateResult.error || questionsResult.error || optionsResult.error || submissionsResult.error || leaderboardResult.error) {
     sendJson(response, 500, {
       error: roundsResult.error?.message
+        || roundPublicStateResult.error?.message
         || questionsResult.error?.message
         || optionsResult.error?.message
         || submissionsResult.error?.message
@@ -147,6 +169,7 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     id: string;
     roundId: string;
     submittedAt: string;
+    timeTakenSeconds: number;
     totalScore: number | null;
     status: 'accepted' | 'rejected';
   }>>((acc, row) => {
@@ -154,6 +177,7 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       id: row.id,
       roundId: row.round_id,
       submittedAt: row.submitted_at,
+      timeTakenSeconds: row.time_taken_seconds,
       totalScore: row.total_score,
       status: row.status,
     };
@@ -174,8 +198,30 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     questionsByRoundId.set(row.round_id, group);
   }
 
+  const roundPublicStateById = new Map<string, RoundPublicStateRow>();
+  for (const row of (roundPublicStateResult.data ?? []) as RoundPublicStateRow[]) {
+    roundPublicStateById.set(row.round_id, row);
+  }
+
   let previousRoundsSubmitted = true;
   const rounds = ((roundsResult.data ?? []) as RoundRow[]).map((row) => {
+    const publicState = roundPublicStateById.get(row.id);
+    const submission = submissionsByRound[row.id];
+    const participantRound = {
+      status: publicState?.status ?? row.status,
+      timerState: publicState?.timer_state ?? row.timer_state,
+      endsAt: publicState?.ends_at ?? row.ends_at,
+    };
+    const status = deriveParticipantRoundStatus({
+      round: participantRound,
+      sequentiallyAvailable: previousRoundsSubmitted,
+      submission,
+      hasDraftActivity: false,
+      now: Date.now(),
+    });
+    const contentVisible = status === 'submitted' || status === 'available' || status === 'in_progress';
+    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
+
     const roundQuestions = (questionsByRoundId.get(row.id) ?? []).map((question) => ({
       id: question.id,
       roundId: question.round_id,
@@ -186,40 +232,27 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       options: (optionsByQuestionId.get(question.id) ?? []).map((option) => ({
         id: option.id,
         text: option.text,
+        score: 0,
+        orderIndex: option.order_index,
       })),
     }));
 
-    const submission = submissionsByRound[row.id];
-    const status = deriveParticipantRoundStatus({
-      round: {
-        status: row.status,
-        timerState: row.timer_state,
-        endsAt: row.ends_at,
-      },
-      sequentiallyAvailable: previousRoundsSubmitted,
-      submission,
-      hasDraftActivity: false,
-    });
-
-    const contentVisible = status === 'submitted' || status === 'available' || status === 'in_progress';
-    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
-
     return {
       id: row.id,
-      orderIndex: row.order_index,
-      title: row.title,
-      description: row.description ?? '',
+      orderIndex: publicState?.order_index ?? row.order_index,
+      title: publicState?.title ?? row.title,
+      description: publicState?.description ?? row.description ?? '',
       objective: contentVisible ? row.objective ?? '' : '',
       caseBrief: contentVisible ? row.case_brief ?? '' : '',
       zipPassword: contentVisible ? row.zip_password : null,
       documentation: contentVisible ? toDocumentationSections(row.documentation) : [],
-      status: row.status,
-      timerMinutes: row.timer_minutes,
-      timerState: row.timer_state,
+      status: participantRound.status,
+      timerMinutes: publicState?.timer_minutes ?? row.timer_minutes,
+      timerState: participantRound.timerState,
       timerDurationSeconds: row.timer_duration_seconds,
-      timerRemainingSeconds: row.timer_remaining_seconds,
-      startsAt: row.starts_at,
-      endsAt: row.ends_at,
+      timerRemainingSeconds: publicState?.timer_remaining_seconds ?? row.timer_remaining_seconds,
+      startsAt: publicState?.starts_at ?? row.starts_at,
+      endsAt: participantRound.endsAt,
       questionCount: roundQuestions.length,
       contentVisible,
       questions: contentVisible ? roundQuestions : [],
@@ -235,6 +268,7 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     round2Score: row.round_2_score,
     round3Score: row.round_3_score,
     totalScore: row.total_score,
+    totalTimeSeconds: row.total_time_seconds,
     updatedAt: row.updated_at,
   }));
 

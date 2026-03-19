@@ -107,6 +107,7 @@ export default async function handler(request: NodeRequest<SubmitRoundBody>, res
   sendJson(response, 200, {
     submissionId: submission.submission_id,
     submittedAt: submission.submitted_at,
+    timeTakenSeconds: submission.time_taken_seconds,
     totalScore: submission.total_score,
     status: submission.status,
   });

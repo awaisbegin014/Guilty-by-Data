@@ -5,6 +5,17 @@ import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { Trophy, ArrowRight, LayoutDashboard, ShieldCheck, Database } from 'lucide-react';
 
+function formatDuration(seconds: number | null | undefined) {
+    if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) {
+        return 'N/A';
+    }
+
+    const safeSeconds = Math.max(0, seconds);
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = safeSeconds % 60;
+    return `${minutes}m ${remainingSeconds.toString().padStart(2, '0')}s`;
+}
+
 export const RoundSubmissionPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
     const navigate = useNavigate();
@@ -25,6 +36,7 @@ export const RoundSubmissionPage: React.FC = () => {
     const submittedTime = progress.submittedAt
         ? new Date(progress.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
         : 'N/A';
+    const timeTaken = formatDuration(progress.timeTakenSeconds);
 
     return (
         <div className="pt-2 pb-6">
@@ -48,10 +60,14 @@ export const RoundSubmissionPage: React.FC = () => {
 
                     <div className="p-5 space-y-3">
                         {/* Technical Metadata */}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                              <div className="p-2 bg-secondary/10 border border-border rounded-lg text-center">
                                 <p className="text-[0.45rem] font-mono text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Time</p>
                                 <p className="text-[0.7rem] font-black text-white font-mono">{submittedTime}</p>
+                             </div>
+                             <div className="p-2 bg-secondary/10 border border-border rounded-lg text-center">
+                                <p className="text-[0.45rem] font-mono text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Duration</p>
+                                <p className="text-[0.7rem] font-black text-white font-mono">{timeTaken}</p>
                              </div>
                              <div className="p-2 bg-secondary/10 border border-border rounded-lg text-center">
                                 <p className="text-[0.45rem] font-mono text-muted-foreground font-bold uppercase tracking-widest mb-0.5">Status</p>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Clock3,
@@ -21,7 +21,7 @@ const inputClass = 'w-full rounded-xl border border-slate-700 bg-slate-950 px-3.
 const labelClass = 'mb-2 block text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400';
 
 export const AdminRoundManager: React.FC = () => {
-  const { rounds, updateRound, runAdminRoundAction, refreshAdminData, error } = useAppStore();
+  const { rounds, updateRound, runAdminRoundAction, error, serverTimeOffsetMs } = useAppStore();
   const [selectedRoundId, setSelectedRoundId] = useState<string>('');
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -34,8 +34,7 @@ export const AdminRoundManager: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [zipPassword, setZipPassword] = useState('');
   const [timerMinutes, setTimerMinutes] = useState('');
-  const [now, setNow] = useState(() => Date.now());
-  const refreshScheduledRef = useRef(false);
+  const [now, setNow] = useState(() => Date.now() + serverTimeOffsetMs);
 
   useEffect(() => {
     if (!selectedRoundId && rounds[0]) {
@@ -60,29 +59,24 @@ export const AdminRoundManager: React.FC = () => {
 
   // 1-second ticker: keeps the admin countdown live while a timer is running.
   useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setNow(Date.now() + serverTimeOffsetMs);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeRound?.endsAt, activeRound?.timerState, serverTimeOffsetMs]);
+
+  useEffect(() => {
     if (!activeRound || activeRound.timerState !== 'running') {
-      refreshScheduledRef.current = false;
       return;
     }
 
     const interval = setInterval(() => {
-      const nextNow = Date.now();
-      setNow(nextNow);
-
-      if (
-        activeRound.endsAt &&
-        activeRound.timerState === 'running' &&
-        nextNow >= new Date(activeRound.endsAt).getTime() &&
-        !refreshScheduledRef.current
-      ) {
-        refreshScheduledRef.current = true;
-        clearInterval(interval);
-        void refreshAdminData();
-      }
+      setNow(Date.now() + serverTimeOffsetMs);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeRound, refreshAdminData]);
+  }, [activeRound, serverTimeOffsetMs]);
 
   if (!activeRound) {
     return null;

@@ -48,6 +48,7 @@ interface OptionRow {
   question_id: string;
   order_index: number;
   text: string;
+  score: number | null;
 }
 
 interface QuestionRow {
@@ -69,6 +70,7 @@ interface SubmissionRow {
   round_id: string;
   submitted_at: string;
   total_score: number | null;
+  time_taken_seconds: number | null;
   status: 'accepted' | 'rejected';
 }
 
@@ -80,6 +82,7 @@ interface LeaderboardRow {
   round_2_score: number;
   round_3_score: number;
   total_score: number;
+  total_time_seconds: number | null;
   updated_at: string;
 }
 
@@ -88,6 +91,16 @@ interface ParticipantBundleResponse {
   rounds: Round[];
   submissionsByRound: Record<string, RoundSubmission>;
   leaderboard: LeaderboardEntry[];
+}
+
+interface ServerTimeResponse {
+  serverNow: string;
+}
+
+export interface ServerTimeSample {
+  serverNow: string;
+  requestStartedAtMs: number;
+  responseReceivedAtMs: number;
 }
 
 function tryParseJson(text: string) {
@@ -197,6 +210,8 @@ function mapQuestions(
         .map((option) => ({
           id: option.id,
           text: option.text,
+          score: option.score ?? 0,
+          orderIndex: option.order_index,
         }));
 
       return {
@@ -280,7 +295,7 @@ async function loadRoundRows() {
       .select('id, round_id, order_index, text, type, input_type'),
     client
       .from('options')
-      .select('id, question_id, order_index, text'),
+      .select('id, question_id, order_index, text, score'),
   ]);
 
   if (roundsResult.error) {
@@ -483,6 +498,45 @@ export async function fetchParticipantBundle() {
   return data as ParticipantBundleResponse;
 }
 
+export async function fetchServerTime() {
+  const serverTimeUrl = (import.meta.env.VITE_SERVER_TIME_API_URL || '').trim() || '/api/server-time';
+  const requestStartedAtMs = Date.now();
+  const response = await fetch(serverTimeUrl, {
+    method: 'GET',
+    cache: 'no-store',
+  });
+  const responseReceivedAtMs = Date.now();
+
+  const text = await response.text();
+  const data = tryParseJson(text);
+
+  if (!response.ok) {
+    throw new Error(toApiFailureMessage({
+      data,
+      text,
+      fallback: 'Failed to load server time.',
+      localDevHint: 'Server time API returned a non-JSON response. If you are running locally, start the app with `vercel dev` or set `VITE_SERVER_TIME_API_URL`.',
+    }));
+  }
+
+  if (!data || typeof data !== 'object' || typeof (data as ServerTimeResponse).serverNow !== 'string') {
+    throw new Error(
+      toApiFailureMessage({
+        data,
+        text,
+        fallback: 'Server time API returned an invalid response.',
+        localDevHint: 'Server time API returned source instead of JSON. If you are running locally, start the app with `vercel dev` or set `VITE_SERVER_TIME_API_URL`.',
+      }),
+    );
+  }
+
+  return {
+    serverNow: (data as ServerTimeResponse).serverNow,
+    requestStartedAtMs,
+    responseReceivedAtMs,
+  } satisfies ServerTimeSample;
+}
+
 export async function fetchAdminRounds() {
   const client = requireSupabase();
   const rows = await loadRoundRows();
@@ -506,7 +560,7 @@ export async function fetchTeamSubmissions(teamId: string) {
   const client = requireSupabase();
   const { data, error } = await client
     .from('submissions')
-    .select('id, round_id, submitted_at, total_score, status')
+    .select('id, round_id, submitted_at, total_score, time_taken_seconds, status')
     .eq('team_id', teamId);
 
   if (error) {
@@ -520,6 +574,7 @@ export async function fetchTeamSubmissions(teamId: string) {
       roundId: submission.round_id,
       submittedAt: submission.submitted_at,
       totalScore: submission.total_score,
+      timeTakenSeconds: submission.time_taken_seconds,
       status: submission.status,
     };
     return acc;
@@ -530,8 +585,9 @@ export async function fetchLeaderboard() {
   const client = requireSupabase();
   const { data, error } = await client
     .from('leaderboard')
-    .select('team_id, team_name, username, round_1_score, round_2_score, round_3_score, total_score, updated_at')
+    .select('team_id, team_name, username, round_1_score, round_2_score, round_3_score, total_score, total_time_seconds, updated_at')
     .order('total_score', { ascending: false })
+    .order('total_time_seconds', { ascending: true, nullsFirst: false })
     .order('updated_at', { ascending: true });
 
   if (error) {
@@ -549,6 +605,7 @@ export async function fetchLeaderboard() {
       round2Score: entry.round_2_score,
       round3Score: entry.round_3_score,
       totalScore: entry.total_score,
+      totalTimeSeconds: entry.total_time_seconds,
       updatedAt: entry.updated_at,
     };
   });
@@ -633,6 +690,7 @@ export async function saveQuestion(roundId: string, question: Question) {
       question_id: persistedQuestionId,
       order_index: index,
       text: option.text,
+      score: option.score ?? 0,
     }));
 
   if (updates.length > 0) {
@@ -660,6 +718,7 @@ export async function saveQuestion(roundId: string, question: Question) {
       question_id: persistedQuestionId,
       order_index: index,
       text: option.text,
+      score: option.score ?? 0,
       local_id: option.id,
     }));
 
@@ -670,6 +729,7 @@ export async function saveQuestion(roundId: string, question: Question) {
         question_id: insert.question_id,
         order_index: insert.order_index,
         text: insert.text,
+        score: insert.score,
       })))
       .select('id, order_index');
 
