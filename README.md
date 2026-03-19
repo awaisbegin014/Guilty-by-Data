@@ -31,7 +31,7 @@ That means:
 For production on Vercel:
 
 1. Set the four env vars above in the Vercel project.
-2. Apply the SQL in `supabase/migrations/202603150001_initial_backend.sql`.
+2. Apply the SQL in `supabase/migrations/`.
 3. Deploy the app to Vercel.
 
 Test the full submission flow after deployment so the `/api/submit-round` route is exercised in the deployed environment.
