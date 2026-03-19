@@ -11,17 +11,6 @@ export interface AdminUser {
   displayName: string | null;
 }
 
-export interface CompetitionConfig {
-  totalRounds: number;
-  questionsPerRound: number;
-  timerMinutesPerRound: number;
-  timerStartMode: 'round_open' | 'mcq_start';
-  questionNavigationMode: 'bidirectional' | 'one_way';
-  sequentialRoundUnlock: boolean;
-  leaderboardEnabled: boolean;
-  showScoresImmediately: boolean;
-}
-
 export interface Option {
   id: string;
   text: string;

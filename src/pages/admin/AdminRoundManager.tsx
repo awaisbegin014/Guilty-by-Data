@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Clock3,
@@ -21,7 +21,7 @@ const inputClass = 'w-full rounded-xl border border-slate-700 bg-slate-950 px-3.
 const labelClass = 'mb-2 block text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400';
 
 export const AdminRoundManager: React.FC = () => {
-  const { rounds, updateRound, runAdminRoundAction, error } = useAppStore();
+  const { rounds, updateRound, runAdminRoundAction, refreshAdminData, error } = useAppStore();
   const [selectedRoundId, setSelectedRoundId] = useState<string>('');
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -34,6 +34,8 @@ export const AdminRoundManager: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [zipPassword, setZipPassword] = useState('');
   const [timerMinutes, setTimerMinutes] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+  const refreshScheduledRef = useRef(false);
 
   useEffect(() => {
     if (!selectedRoundId && rounds[0]) {
@@ -56,14 +58,40 @@ export const AdminRoundManager: React.FC = () => {
     setTimerMinutes(String(activeRound.timerMinutes));
   }, [activeRound]);
 
+  // 1-second ticker: keeps the admin countdown live while a timer is running.
+  useEffect(() => {
+    if (!activeRound || activeRound.timerState !== 'running') {
+      refreshScheduledRef.current = false;
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const nextNow = Date.now();
+      setNow(nextNow);
+
+      if (
+        activeRound.endsAt &&
+        activeRound.timerState === 'running' &&
+        nextNow >= new Date(activeRound.endsAt).getTime() &&
+        !refreshScheduledRef.current
+      ) {
+        refreshScheduledRef.current = true;
+        clearInterval(interval);
+        void refreshAdminData();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeRound, refreshAdminData]);
+
   if (!activeRound) {
     return null;
   }
 
-  const effectiveTimerState = getEffectiveTimerState(activeRound);
+  const effectiveTimerState = getEffectiveTimerState(activeRound, now);
   const isUnlocked = activeRound.status === 'open';
   const remainingSeconds = effectiveTimerState === 'running' && activeRound.endsAt
-    ? Math.max(0, Math.floor((new Date(activeRound.endsAt).getTime() - Date.now()) / 1000))
+    ? Math.max(0, Math.floor((new Date(activeRound.endsAt).getTime() - now) / 1000))
     : activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds;
   const remainingMinutes = Math.floor(remainingSeconds / 60);
   const remainingDisplaySeconds = remainingSeconds % 60;
