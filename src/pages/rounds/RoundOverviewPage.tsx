@@ -6,6 +6,7 @@ import { TimerBanner } from '../../components/TimerBanner';
 import { KeyRound, ArrowRight, ShieldAlert, Copy, Briefcase } from 'lucide-react';
 import { Badge } from '../../components/ui/Badge';
 import { canAccessRoundRoute } from '../../lib/roundState';
+import { formatRoundPhaseLabel } from '../../lib/roundPresentation';
 
 export const RoundOverviewPage: React.FC = () => {
     const { roundId } = useParams<{ roundId: string }>();
@@ -60,7 +61,7 @@ export const RoundOverviewPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                          <div className="w-1.5 h-6 bg-primary rounded-full shadow-[0_0_8px_rgba(74,124,157,0.4)]" />
                          <span className="text-[0.7rem] font-black font-mono text-white/90 uppercase tracking-[0.3em]">
-                            Investigation Registry // Phase {String(round.orderIndex + 1).padStart(2, '0')}
+                            Investigation Registry // {formatRoundPhaseLabel(round.orderIndex)}
                          </span>
                     </div>
                     <div>

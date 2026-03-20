@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useAppStore } from '../../store/useAppStore';
 import { getEffectiveTimerState } from '../../lib/roundState';
+import type { AdminRoundAction } from '../../types';
 
 const inputClass = 'w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors focus:border-primary';
 const labelClass = 'mb-2 block text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400';
@@ -57,7 +58,6 @@ export const AdminRoundManager: React.FC = () => {
     setTimerMinutes(String(activeRound.timerMinutes));
   }, [activeRound]);
 
-  // 1-second ticker: keeps the admin countdown live while a timer is running.
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setNow(Date.now() + serverTimeOffsetMs);
@@ -89,6 +89,10 @@ export const AdminRoundManager: React.FC = () => {
     : activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds;
   const remainingMinutes = Math.floor(remainingSeconds / 60);
   const remainingDisplaySeconds = remainingSeconds % 60;
+  const isResetState = effectiveTimerState === 'idle'
+    && activeRound.startsAt === null
+    && activeRound.endsAt === null
+    && (activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds) === activeRound.timerDurationSeconds;
 
   const beginContentEdit = () => {
     setEditTitle(activeRound.title);
@@ -126,7 +130,7 @@ export const AdminRoundManager: React.FC = () => {
   };
 
   const handleRoundAction = async (
-    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+    action: AdminRoundAction,
     payload?: { timerMinutes?: number },
   ) => {
     setIsRunningAction(true);
@@ -149,10 +153,12 @@ export const AdminRoundManager: React.FC = () => {
         : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-100 hover:border-emerald-400/40',
     },
     {
-      label: 'Start Timer',
-      description: 'Starts a fresh timer from the configured default duration.',
+      label: 'Start / Resume',
+      description: effectiveTimerState === 'paused'
+        ? 'Continues a paused timer from the remaining time.'
+        : 'Starts a fresh timer from the configured default duration.',
       icon: <PlayCircle size={16} />,
-      disabled: !isUnlocked || isRunningAction || !['idle', 'expired'].includes(effectiveTimerState),
+      disabled: !isUnlocked || isRunningAction || !['idle', 'expired', 'paused'].includes(effectiveTimerState),
       onClick: () => void handleRoundAction('start_timer'),
       className: 'border-primary/20 bg-primary/10 text-slate-100 hover:border-primary/40',
     },
@@ -165,11 +171,11 @@ export const AdminRoundManager: React.FC = () => {
       className: 'border-amber-500/20 bg-amber-500/10 text-amber-100 hover:border-amber-400/40',
     },
     {
-      label: 'Resume Timer',
-      description: 'Continues a paused timer from the remaining time.',
+      label: 'Reset Round',
+      description: 'Returns the timer to idle and restores the full default duration.',
       icon: <RotateCcw size={16} />,
-      disabled: !isUnlocked || isRunningAction || effectiveTimerState !== 'paused',
-      onClick: () => void handleRoundAction('resume_timer'),
+      disabled: isRunningAction || isResetState,
+      onClick: () => void handleRoundAction('reset_round'),
       className: 'border-sky-500/20 bg-sky-500/10 text-sky-100 hover:border-sky-400/40',
     },
   ];
@@ -195,7 +201,7 @@ export const AdminRoundManager: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-4">
           <p className="px-3 pb-3 text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Select Round</p>
           <div className="space-y-2">
@@ -256,7 +262,7 @@ export const AdminRoundManager: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {actionCards.map((action) => (
               <button
                 key={action.label}

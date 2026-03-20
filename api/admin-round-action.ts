@@ -4,7 +4,7 @@ import { authenticateRequest, readBody, sendJson } from './_lib/server.js';
 
 interface AdminRoundActionBody {
   roundId?: string;
-  action?: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration';
+  action?: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration';
   timerMinutes?: number;
 }
 

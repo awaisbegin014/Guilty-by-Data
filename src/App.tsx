@@ -50,6 +50,7 @@ const AppRoutes: React.FC = () => {
     team,
     isAdmin,
     refreshParticipantData,
+    refreshAdminData,
     syncServerClock,
     syncCorrectAnswerRecord,
     syncLeaderboardRecord,
@@ -60,6 +61,7 @@ const AppRoutes: React.FC = () => {
     syncSubmissionRecord,
   } = useAppStore();
   const lastParticipantRefreshRef = useRef(0);
+  const lastRealtimeRecoveryRef = useRef(0);
 
   useEffect(() => {
     void bootstrapApp();
@@ -99,9 +101,31 @@ const AppRoutes: React.FC = () => {
     }
 
     const client = supabase;
+    let isChannelActive = true;
     const getSyncRow = <TRow extends Record<string, unknown>>(
       payload: RealtimePostgresChangesPayload<TRow>,
     ) => (payload.eventType === 'DELETE' ? payload.old : payload.new) as TRow;
+
+    const recoverFromRealtimeGap = () => {
+      if (!isChannelActive) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastRealtimeRecoveryRef.current < 5000) {
+        return;
+      }
+
+      lastRealtimeRecoveryRef.current = now;
+      if (team) {
+        void refreshParticipantData();
+        return;
+      }
+
+      if (isAdmin) {
+        void refreshAdminData();
+      }
+    };
 
     const handleRoundPublicState = (
       payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
@@ -232,9 +256,18 @@ const AppRoutes: React.FC = () => {
         );
     }
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+      if (!isChannelActive) {
+        return;
+      }
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        recoverFromRealtimeGap();
+      }
+    });
 
     return () => {
+      isChannelActive = false;
       void client.removeChannel(channel);
     };
   }, [
@@ -247,6 +280,7 @@ const AppRoutes: React.FC = () => {
     syncRoundPublicState,
     syncRoundRecord,
     syncSubmissionRecord,
+    refreshParticipantData,
     team,
   ]);
 

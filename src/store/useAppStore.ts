@@ -292,7 +292,7 @@ interface AppState {
   updateRound: (roundId: string, updates: Partial<Round>) => Promise<void>;
   runAdminRoundAction: (
     roundId: string,
-    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration',
     payload?: { timerMinutes?: number },
   ) => Promise<void>;
   saveQuestion: (roundId: string, question: Question) => Promise<void>;

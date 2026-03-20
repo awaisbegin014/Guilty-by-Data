@@ -856,7 +856,7 @@ export async function submitRound(roundId: string, answers: Record<string, strin
 
 export async function runAdminRoundAction(
   roundId: string,
-  action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'set_timer_duration',
+  action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration',
   payload?: { timerMinutes?: number },
 ) {
   const client = requireSupabase();

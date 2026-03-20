@@ -11,6 +11,8 @@ export interface AdminUser {
   displayName: string | null;
 }
 
+export type AdminRoundAction = 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration';
+
 export interface Option {
   id: string;
   text: string;

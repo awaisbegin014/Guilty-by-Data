@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { Trophy, ArrowRight, LayoutDashboard, ShieldCheck, Database } from 'lucide-react';
+import { formatRoundSystemLabel } from '../../lib/roundPresentation';
 
 function formatDuration(seconds: number | null | undefined) {
     if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) {
@@ -115,7 +116,7 @@ export const RoundSubmissionPage: React.FC = () => {
 
                 <div className="mt-3 text-center">
                     <p className="text-[0.5rem] text-muted-foreground font-bold uppercase tracking-[0.3em]">
-                        System Log: Round_{String(round.orderIndex + 1).padStart(2, '0')}_Verified
+                        System Log: {formatRoundSystemLabel(round.orderIndex)}_Verified
                     </p>
                 </div>
             </div>

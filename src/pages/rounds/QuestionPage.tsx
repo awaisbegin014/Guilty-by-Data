@@ -7,6 +7,7 @@ import { TimerBanner } from '../../components/TimerBanner';
 import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { canAccessRoundRoute } from '../../lib/roundState';
+import { formatRoundShortCode } from '../../lib/roundPresentation';
 
 export const QuestionPage: React.FC = () => {
     const { roundId, questionIndex } = useParams<{ roundId: string; questionIndex: string }>();
@@ -112,7 +113,7 @@ export const QuestionPage: React.FC = () => {
                     <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 border border-primary/30 rounded bg-primary/10">
                         <Database size={10} className="text-primary" />
                         <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">
-                            P_{String(round.orderIndex + 1).padStart(2, '0')}
+                            {formatRoundShortCode(round.orderIndex)}
                         </span>
                     </div>
                 </div>
