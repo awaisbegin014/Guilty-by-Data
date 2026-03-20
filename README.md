@@ -31,8 +31,14 @@ That means:
 For production on Vercel:
 
 1. Set the four env vars above in the Vercel project.
-2. Apply the SQL in `supabase/migrations/`.
+2. Apply any pending SQL files from `supabase/migrations/` in version order.
+   For a fresh database, apply all migrations in order.
+   For an existing database, apply only the migrations that have not been applied yet.
 3. Deploy the app to Vercel.
+4. Run a quick smoke test after deploy:
+   - admin round unlock, start, pause, and reset flow
+   - participant submission flow through `/api/submit-round`
+   - leaderboard update after a submission
 
-Test the full submission flow after deployment so the `/api/submit-round` route is exercised in the deployed environment.
+This helps confirm both the server route and the latest database changes are active in the deployed environment.
 
