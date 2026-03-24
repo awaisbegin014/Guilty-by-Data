@@ -21,7 +21,7 @@ export const AdminLayout: React.FC = () => {
     ];
 
     return (
-        <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
+        <div className="flex flex-col h-screen overflow-hidden text-foreground bg-general-image">
 
             {/* Admin Header */}
             <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
@@ -69,7 +69,7 @@ export const AdminLayout: React.FC = () => {
             </header>
 
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(74,124,157,0.12),_transparent_32%),linear-gradient(180deg,_rgba(10,12,14,0.98),_rgba(13,15,17,1))] p-8">
+            <main className="flex-1 overflow-y-auto bg-background/80 backdrop-blur-[2px] p-8">
                 <div className="container max-w-7xl mx-auto">
                     <Outlet />
                 </div>

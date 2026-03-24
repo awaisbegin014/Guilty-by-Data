@@ -23,7 +23,9 @@ export const Layout: React.FC = () => {
     : '';
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground bg-analytical-grid">
+    <div className={`flex h-screen flex-col overflow-hidden text-foreground ${
+      location.pathname === '/' ? 'bg-background bg-analytical-grid' : 'bg-general-image'
+    }`}>
       <header className="z-40 shrink-0 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div
@@ -89,13 +91,13 @@ export const Layout: React.FC = () => {
 
       <main className="relative flex-1 overflow-y-auto">
         <div className="flex min-h-full flex-col">
-          <div className="flex-1">
+          <div className="flex-1 flex flex-col items-stretch">
             <Outlet />
           </div>
 
-          <footer className="mt-auto shrink-0 border-t border-border bg-card/50 py-6">
+          <footer className="mt-auto shrink-0 border-t border-border bg-card/50 py-3">
             <div className="container">
-              <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+              <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
                 <div className="text-left">
                   <p className="case-label mb-0.5">System Status: Active</p>
                   <p className="text-[0.6rem] font-medium uppercase tracking-tight text-muted-foreground">

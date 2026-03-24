@@ -134,6 +134,25 @@ body {
     linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
 }
 
+/* Global Background Image */
+.bg-general-image {
+  background-image: url('/general-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Auth Background Image */
+.bg-auth-image {
+  background-image: url('/auth-bg.png');
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+}
+
+
+
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 10px;

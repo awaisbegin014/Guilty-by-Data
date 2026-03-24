@@ -37,19 +37,9 @@ export const TeamLoginPage: React.FC = () => {
     const displayError = localError || error;
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-background bg-analytical-grid">
+        <div className="w-full h-full flex-1 flex items-start justify-center pt-4 px-4 pb-8 bg-auth-image overflow-hidden">
             <div className="w-full max-w-[400px]">
-                {/* Header Context */}
-                <div className="flex items-center justify-between mb-3 px-1">
-                    <div className="flex items-center gap-2">
-                        <Shield size={14} className="text-primary" />
-                        <span className="case-label text-[0.55rem]">Central Intelligence Node</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[0.5rem] text-muted-foreground font-mono font-bold uppercase tracking-wider">
-                        <Database size={10} />
-                        DB_SECURED
-                    </div>
-                </div>
+
 
                 {/* Main Login Card */}
                 <div className="dossier-card rounded-xl shadow-2xl overflow-hidden">
@@ -136,12 +126,7 @@ export const TeamLoginPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Footer Disclaimer */}
-                <div className="mt-3 text-center">
-                    <p className="text-[0.5rem] text-muted-foreground font-medium uppercase tracking-[0.2em] opacity-50">
-                        Classified access only // GATEWAY_7492
-                    </p>
-                </div>
+
             </div>
         </div>
     );
