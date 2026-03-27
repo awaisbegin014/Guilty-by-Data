@@ -22,19 +22,15 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         const timeout = window.setTimeout(() => {
             setNow(Date.now() + serverTimeOffsetMs);
         }, 0);
-
         return () => window.clearTimeout(timeout);
     }, [round?.endsAt, round?.timerState, serverTimeOffsetMs]);
 
     useEffect(() => {
-        if (!round || progress?.status === 'submitted') {
-            return;
-        }
+        if (!round || progress?.status === 'submitted') return;
 
         const interval = setInterval(() => {
             const nextNow = Date.now() + serverTimeOffsetMs;
             setNow(nextNow);
-
             if (round.endsAt && round.timerState === 'running') {
                 const nextTime = Math.max(0, new Date(round.endsAt).getTime() - nextNow);
                 if (nextTime === 0) {
@@ -47,75 +43,55 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         return () => clearInterval(interval);
     }, [progress?.status, recomputeParticipantState, round, roundId, serverTimeOffsetMs]);
 
-    if (progress?.status === 'submitted' || !round) {
-        return null;
-    }
+    if (progress?.status === 'submitted' || !round) return null;
 
+    // ── Locked ──
     if (progress?.status === 'locked') {
         return (
-            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
-                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-border bg-slate-950/60 text-slate-300">
-                    <Lock size={15} className="shrink-0" />
-                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
-                        Round Locked
-                    </span>
-                </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-slate-900/80">
+                <Lock size={11} className="text-slate-400 shrink-0" />
+                <span className="text-[0.55rem] font-black font-mono text-slate-400 uppercase tracking-widest">Locked</span>
             </div>
         );
     }
 
+    // ── Idle ──
     if (timerState === 'idle') {
         return (
-            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
-                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-border bg-slate-900/70 text-slate-200">
-                    <Radar size={15} className="shrink-0 text-primary" />
-                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
-                        Timer Not Started
-                    </span>
-                    <span className="text-[0.65rem] text-slate-400 uppercase tracking-wider">
-                        Waiting for admin activation
-                    </span>
-                </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-slate-900/80">
+                <Radar size={11} className="text-primary shrink-0" />
+                <span className="text-[0.55rem] font-black font-mono text-slate-300 uppercase tracking-widest">Awaiting Start</span>
             </div>
         );
     }
 
+    // ── Paused ──
     if (timerState === 'paused') {
         const minutes = Math.floor((timeLeftSeconds ?? 0) / 60);
         const seconds = Math.floor((timeLeftSeconds ?? 0) % 60);
-
         return (
-            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
-                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-100">
-                    <PauseCircle size={15} className="shrink-0" />
-                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
-                        Timer Paused
-                    </span>
-                    <span className="mx-1 opacity-40">|</span>
-                    <span className="font-mono text-[0.95rem] font-black tracking-widest">
-                        {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-                    </span>
-                </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10">
+                <PauseCircle size={11} className="text-amber-400 shrink-0" />
+                <span className="text-[0.55rem] font-black font-mono text-amber-300 uppercase tracking-widest">Paused</span>
+                <span className="text-[0.55rem] opacity-40 font-mono">|</span>
+                <span className="font-mono text-[0.85rem] font-black text-amber-200 tracking-widest">
+                    {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+                </span>
             </div>
         );
     }
 
+    // ── Expired ──
     if (timerState === 'expired') {
         return (
-            <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
-                <div className="flex items-center justify-center gap-3 py-2 px-6 rounded-lg border border-red-700 bg-red-600 text-white shadow-red-900/20">
-                    <AlertTriangle size={15} className="shrink-0" />
-                    <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
-                        Round Expired
-                    </span>
-                </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-700 bg-red-600/90">
+                <AlertTriangle size={11} className="text-white shrink-0" />
+                <span className="text-[0.55rem] font-black font-mono text-white uppercase tracking-widest">Expired</span>
             </div>
         );
     }
 
-    if (timeLeftSeconds === null) {
-        return null;
-    }
+    if (timeLeftSeconds === null) return null;
 
     const minutes = Math.floor(timeLeftSeconds / 60);
     const seconds = Math.floor(timeLeftSeconds % 60);
@@ -123,29 +99,25 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     const isCritical = timeLeftSeconds < 60;
 
     return (
-        <div className="container max-w-[700px] mt-2 mb-1 shrink-0">
-            <div
-                className={cn(
-                    "flex items-center justify-center gap-3 py-2 px-6 rounded-lg border-2 shadow-lg transition-colors duration-300",
-                    isCritical ? "bg-red-600 text-white border-red-700 shadow-red-900/20" :
-                        isWarning ? "bg-yellow-400 text-yellow-950 border-yellow-500 shadow-yellow-900/10" :
-                            "bg-slate-900 text-white border-slate-700 shadow-black/40"
-                )}
-            >
-                {isWarning ? <AlertTriangle size={15} className="shrink-0" /> : <Clock size={15} className="shrink-0" />}
-                <span className="text-[0.65rem] tracking-[0.2em] font-black uppercase">
-                    {isCritical ? "TIME CRITICAL" : isWarning ? "WARNING" : "TIME REMAINING"}
-                </span>
-                <span className="mx-1 opacity-40">|</span>
-                <span
-                    className={cn(
-                        "font-mono text-[0.95rem] font-black tracking-widest",
-                        isCritical && "animate-pulse"
-                    )}
-                >
-                    {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
-                </span>
-            </div>
+        <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors duration-300",
+            isCritical
+                ? "bg-red-600/90 border-red-700 text-white"
+                : isWarning
+                    ? "bg-yellow-400/90 border-yellow-500 text-yellow-950"
+                    : "bg-slate-900/90 border-slate-700 text-white"
+        )}>
+            {isWarning
+                ? <AlertTriangle size={11} className="shrink-0" />
+                : <Clock size={11} className="shrink-0" />
+            }
+            <span className="text-[0.5rem] font-black font-mono uppercase tracking-widest opacity-70">
+                {isCritical ? "CRITICAL" : isWarning ? "WARNING" : "TIME"}
+            </span>
+            <span className="text-[0.5rem] opacity-30 font-mono">|</span>
+            <span className={cn("font-mono text-[0.85rem] font-black tracking-widest", isCritical && "animate-pulse")}>
+                {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+            </span>
         </div>
     );
 };

@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { UserCircle, Trophy, LogOut, Database } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
-import { getParticipantPrimaryLabel, getParticipantSecondaryLabel } from '../lib/teamIdentity';
+import { getParticipantPrimaryLabel } from '../lib/teamIdentity';
 
 export const Layout: React.FC = () => {
   const { team, logout } = useAppStore();
@@ -18,9 +18,7 @@ export const Layout: React.FC = () => {
   const participantLabel = team
     ? getParticipantPrimaryLabel({ name: team.name, username: team.username, email: team.email })
     : '';
-  const participantSecondary = team
-    ? getParticipantSecondaryLabel({ name: team.name, username: team.username, email: team.email })
-    : '';
+
 
   return (
     <div className={`flex h-screen flex-col overflow-hidden text-foreground ${
@@ -50,20 +48,14 @@ export const Layout: React.FC = () => {
 
           {team && (
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
-              <div className="min-w-0 rounded-md border border-border bg-secondary px-3 py-2 sm:max-w-[360px]">
-                <div className="flex items-start gap-2.5">
-                  <UserCircle size={15} className="mt-0.5 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className="text-[0.5rem] font-black uppercase tracking-[0.24em] text-muted-foreground">Active Team</p>
-                    <p className="mt-0.5 break-words text-[0.78rem] font-black leading-tight text-foreground sm:text-[0.8rem]">
-                      {participantLabel}
-                    </p>
-                    {participantSecondary && (
-                      <p className="mt-1 font-mono text-[0.55rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                        Operator ID // {participantSecondary}
-                      </p>
-                    )}
-                  </div>
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-slate-900/50 px-4 py-1.5 shadow-sm min-w-0 sm:max-w-[360px]">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary shadow-inner-glow">
+                  <UserCircle size={14} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-[0.8rem] font-black text-white leading-none">
+                    {participantLabel}
+                  </p>
                 </div>
               </div>
 
@@ -89,7 +81,7 @@ export const Layout: React.FC = () => {
         </div>
       </header>
 
-      <main className="relative flex-1 overflow-y-auto">
+      <main className="relative flex-1 overflow-y-auto pt-4">
         <div className="flex min-h-full flex-col">
           <div className="flex-1 flex flex-col items-stretch">
             <Outlet />

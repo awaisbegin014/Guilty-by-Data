@@ -21,7 +21,7 @@ export const DashboardPage: React.FC = () => {
             <div className="container max-w-[1100px]">
                 
                 {/* Header: Commands and Status */}
-                <div className="flex flex-col gap-1 mb-12">
+                <div className="flex flex-col gap-1 mb-6">
                     <div className="flex items-center gap-3">
                          <div className="w-1.5 h-6 bg-primary rounded-full" />
                          <span className="text-[0.65rem] font-black font-mono text-muted-foreground uppercase tracking-[0.3em]">
@@ -34,32 +34,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 {/* Dashboard Main Flow */}
-                <div className="flex flex-col gap-10">
-                    
-                    {/* Active Jump-Back (Conditional) */}
-                    {nextAvailableRound && (
-                        <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 flex items-center justify-between animate-pulse-subtle">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
-                                    <Activity size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Active Investigation Detected</h3>
-                                    <p className="text-[0.6rem] text-muted-foreground font-black font-mono uppercase tracking-widest mt-0.5">
-                                        Round: {nextAvailableRound.title} // Ready For Review
-                                    </p>
-                                </div>
-                            </div>
-                            <Button 
-                                onClick={() => navigate(`/round/${nextAvailableRound.id}`)}
-                                variant="primary" 
-                                size="sm" 
-                                className="h-9 px-6 text-[0.65rem] font-black tracking-widest uppercase"
-                            >
-                                Resume Mission <ArrowRight size={14} className="ml-2" />
-                            </Button>
-                        </div>
-                    )}
+                <div className="flex flex-col gap-8">
                     
                     {/* Case Briefing Section */}
                     <div className="dossier-card rounded-2xl overflow-hidden shadow-2xl">
@@ -115,6 +90,31 @@ export const DashboardPage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Active Jump-Back (Conditional) */}
+                    {nextAvailableRound && (
+                        <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 flex items-center justify-between animate-pulse-subtle">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                                    <Activity size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-tight">Active Investigation Detected</h3>
+                                    <p className="text-[0.6rem] text-muted-foreground font-black font-mono uppercase tracking-widest mt-0.5">
+                                        Round: {nextAvailableRound.title} // Ready For Review
+                                    </p>
+                                </div>
+                            </div>
+                            <Button 
+                                onClick={() => navigate(`/round/${nextAvailableRound.id}`)}
+                                variant="primary" 
+                                size="sm" 
+                                className="h-9 px-6 text-[0.65rem] font-black tracking-widest uppercase"
+                            >
+                                Resume Mission <ArrowRight size={14} className="ml-2" />
+                            </Button>
+                        </div>
+                    )}
 
                     {/* Investigation Phases (Horizontal Blocks) */}
                     <div className="space-y-8">

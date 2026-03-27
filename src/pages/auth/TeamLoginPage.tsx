@@ -74,7 +74,7 @@ export const TeamLoginPage: React.FC = () => {
                                 <input
                                     id="teamId"
                                     type="text"
-                                    placeholder="team-alpha"
+                                    placeholder="alpha"
                                     value={teamId}
                                     onChange={(e) => setTeamId(e.target.value)}
                                     autoFocus

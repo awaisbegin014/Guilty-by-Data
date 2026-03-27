@@ -4,7 +4,8 @@ import { useAppStore } from '../../store/useAppStore';
 import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
-import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
+import { McqQuestion } from '../../components/McqQuestion';
+import { ArrowLeft, ArrowRight, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { canAccessRoundRoute } from '../../lib/roundState';
 import { formatRoundShortCode } from '../../lib/roundPresentation';
@@ -74,18 +75,20 @@ export const QuestionPage: React.FC = () => {
     const missingAnswers = round.questions.length - answeredCount;
 
     return (
-        <div className="pt-4 pb-12 min-h-full flex flex-col">
-            <TimerBanner roundId={round.id} />
+        <div className="pb-8 min-h-full flex flex-col">
+            <div className="container max-w-[900px] mt-4 flex-1 flex flex-col">
 
-            <div className="container max-w-[800px] mt-4 flex-1 flex flex-col">
+                {/* Question Terminal Header — progress + timer */}
+                <div className="flex items-center justify-between gap-3 mb-3 pb-3 border-b border-border shrink-0">
+                    {/* Left: round code badge */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 border border-primary/30 rounded bg-primary/10">
+                        <Database size={10} className="text-primary" />
+                        <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">
+                            {formatRoundShortCode(round.orderIndex)}
+                        </span>
+                    </div>
 
-                {/* Question Terminal Header */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 pb-3 border-b border-border shrink-0">
-                    <Button variant="outline" size="sm" onClick={handlePrev} className="w-full sm:w-auto font-black text-[0.55rem] tracking-widest uppercase h-7 px-3">
-                        <ArrowLeft size={10} className="mr-1.5" />
-                        <span>{isFirstQuestion ? 'Case Brief' : 'Prev'}</span>
-                    </Button>
-
+                    {/* Centre: node progress */}
                     <div className="flex flex-col items-center flex-1">
                         <div className="flex items-center gap-1.5 mb-1.5">
                              <Fingerprint size={12} className="text-primary" />
@@ -110,76 +113,45 @@ export const QuestionPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 border border-primary/30 rounded bg-primary/10">
-                        <Database size={10} className="text-primary" />
-                        <span className="text-[0.55rem] font-mono text-white font-black uppercase tracking-wider">
-                            {formatRoundShortCode(round.orderIndex)}
-                        </span>
-                    </div>
+                    {/* Right: timer chip */}
+                    <TimerBanner roundId={round.id} />
                 </div>
 
                 {/* Main Question Dossier */}
-                <div className="dossier-card rounded-xl p-5 sm:p-6 mb-3 border-primary/20 bg-slate-900/60 flex-1 overflow-y-auto min-h-0">
-                    <div className="flex items-start gap-3 mb-4">
-                         <div className="w-8 h-8 rounded border border-border bg-slate-900/40 flex items-center justify-center text-primary font-mono font-black text-[0.65rem] shrink-0">
-                            P{qIndex + 1}
-                         </div>
-                         <h2 className="text-lg font-black text-white leading-tight mt-0.5 tracking-tight">
-                            {question.text}
-                         </h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2">
-                        {question.options.map((option, idx) => {
-                            const isSelected = selectedOptionId === option.id;
-                            const letter = String.fromCharCode(65 + idx);
-                            return (
-                                <button
-                                    key={option.id}
-                                    onClick={() => handleOptionSelect(option.id)}
-                                    className={cn(
-                                        'flex items-center gap-4 text-left px-5 py-3 rounded-lg border transition-all group relative overflow-hidden',
-                                        isSelected
-                                            ? 'bg-primary/10 border-primary shadow-[0_0_12px_rgba(74,124,157,0.1)]'
-                                            : 'bg-secondary/10 border-border/60 hover:border-primary/40 hover:bg-secondary/20'
-                                    )}
-                                >
-                                    <div className={cn(
-                                        'w-7 h-7 flex items-center justify-center font-mono font-black text-[0.65rem] transition-colors rounded border',
-                                        isSelected ? 'bg-primary text-white border-primary' : 'bg-slate-900 border-border text-muted-foreground group-hover:text-slate-200'
-                                    )}>
-                                        {isSelected ? <CheckCircle2 size={14} /> : letter}
-                                    </div>
-                                    <span className={cn(
-                                        'text-[0.85rem] flex-1 font-bold tracking-tight transition-colors',
-                                        isSelected ? 'text-white' : 'text-slate-300'
-                                    )}>
-                                        {option.text}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                <div className="mb-3 flex-1 overflow-y-auto min-h-0">
+                    <McqQuestion
+                        questionNumber={qIndex + 1}
+                        questionText={question.text}
+                        options={question.options}
+                        selectedOptionId={selectedOptionId}
+                        onSelect={handleOptionSelect}
+                    />
                 </div>
 
                 {/* Navigation / Action Bar */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-slate-900/40 border border-border rounded-xl shrink-0">
-                    <div className="flex items-center gap-2.5">
-                         <Info size={14} className="text-primary shrink-0" />
-                         <p className="text-[0.55rem] text-muted-foreground font-black uppercase tracking-widest leading-tight">
-                            Protocol: findings are stored locally until final submission.
-                         </p>
+                <div className="flex items-center justify-between gap-4 p-4 bg-slate-900/40 border border-border rounded-xl shrink-0">
+                    <Button variant="secondary" size="sm" onClick={handlePrev} className="min-w-[150px] h-9 text-[0.65rem] tracking-widest uppercase">
+                        <span className="flex items-center gap-2">
+                            <ArrowLeft size={14} />
+                            <span>{isFirstQuestion ? 'Case Brief' : 'Prev'}</span>
+                        </span>
+                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Info size={13} className="text-primary shrink-0" />
+                        <p className="text-[0.5rem] text-muted-foreground font-black uppercase tracking-widest leading-tight">
+                            Findings stored locally until submission.
+                        </p>
                     </div>
-                    <Button variant="primary" size="sm" onClick={handleNext} className="w-full sm:w-auto min-w-[180px] h-10 text-[0.7rem] tracking-widest uppercase">
+                    <Button variant="primary" size="sm" onClick={handleNext} className="min-w-[150px] h-9 text-[0.65rem] tracking-widest uppercase">
                         {isLastQuestion ? (
                             <span className="flex items-center gap-2">
-                                <Fingerprint size={16} />
+                                <Fingerprint size={14} />
                                 <span>Validate Protocol</span>
                             </span>
                         ) : (
                             <span className="flex items-center gap-2">
                                 <span>Proceed</span>
-                                <ArrowRight size={16} />
+                                <ArrowRight size={14} />
                             </span>
                         )}
                     </Button>
