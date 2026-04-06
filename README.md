@@ -11,7 +11,7 @@ VITE_SUPABASE_ANON_KEY=...
 
 Vercel server function:
 
-```bash
+```   bash
 SUPABASE_URL=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
@@ -38,7 +38,7 @@ For production on Vercel:
 4. Run a quick smoke test after deploy:
    - admin round unlock, start, pause, and reset flow
    - participant submission flow through `/api/submit-round`
-   - leaderboard update after a submission
+   - leaderboard update after  submission
 
 This helps confirm both the server route and the latest database changes are active in the deployed environment.
 
