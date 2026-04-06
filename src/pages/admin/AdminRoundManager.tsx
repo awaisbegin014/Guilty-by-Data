@@ -83,6 +83,7 @@ export const AdminRoundManager: React.FC = () => {
   }
 
   const effectiveTimerState = getEffectiveTimerState(activeRound, now);
+  const startResumeAction: AdminRoundAction = effectiveTimerState === 'paused' ? 'resume_timer' : 'start_timer';
   const isUnlocked = activeRound.status === 'open';
   const remainingSeconds = effectiveTimerState === 'running' && activeRound.endsAt
     ? Math.max(0, Math.floor((new Date(activeRound.endsAt).getTime() - now) / 1000))
@@ -159,7 +160,7 @@ export const AdminRoundManager: React.FC = () => {
         : 'Starts a fresh timer from the configured default duration.',
       icon: <PlayCircle size={16} />,
       disabled: !isUnlocked || isRunningAction || !['idle', 'expired', 'paused'].includes(effectiveTimerState),
-      onClick: () => void handleRoundAction('start_timer'),
+      onClick: () => void handleRoundAction(startResumeAction),
       className: 'border-primary/20 bg-primary/10 text-slate-100 hover:border-primary/40',
     },
     {

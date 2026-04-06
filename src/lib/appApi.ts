@@ -9,6 +9,7 @@ import type {
 import { supabase } from './supabase';
 
 const TEAM_EMAIL_DOMAIN = 'guiltybydata.local';
+const ACCESS_TOKEN_REFRESH_WINDOW_MS = 60_000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type RoundStatus = Round['status'];
@@ -147,6 +148,77 @@ function requireSupabase() {
   }
 
   return supabase;
+}
+
+function sessionNeedsRefresh(session: { access_token?: string | null; expires_at?: number | null } | null) {
+  if (!session?.access_token || !session.expires_at) {
+    return false;
+  }
+
+  return (session.expires_at * 1000) - Date.now() <= ACCESS_TOKEN_REFRESH_WINDOW_MS;
+}
+
+async function getAccessToken(missingAuthMessage: string, forceRefresh = false) {
+  const client = requireSupabase();
+  const {
+    data: { session: initialSession },
+    error: sessionError,
+  } = await client.auth.getSession();
+
+  if (sessionError) {
+    throw sessionError;
+  }
+
+  let session = initialSession;
+
+  if (!session) {
+    throw new Error(missingAuthMessage);
+  }
+
+  if (forceRefresh || sessionNeedsRefresh(session)) {
+    const { data, error } = await client.auth.refreshSession();
+    if (error) {
+      throw error;
+    }
+
+    session = data.session ?? session;
+  }
+
+  if (!session?.access_token) {
+    throw new Error(missingAuthMessage);
+  }
+
+  return session.access_token;
+}
+
+async function authorizedFetch(
+  url: string,
+  init: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> },
+  missingAuthMessage: string,
+) {
+  const accessToken = await getAccessToken(missingAuthMessage);
+  const requestInit: RequestInit = {
+    ...init,
+    headers: {
+      ...init.headers,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  };
+
+  let response = await fetch(url, requestInit);
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refreshedAccessToken = await getAccessToken(missingAuthMessage, true);
+  return fetch(url, {
+    ...requestInit,
+    headers: {
+      ...init.headers,
+      Authorization: `Bearer ${refreshedAccessToken}`,
+    },
+  });
 }
 
 function toTeamEmail(identifier: string) {
@@ -450,27 +522,10 @@ export async function fetchParticipantRounds() {
 }
 
 export async function fetchParticipantBundle() {
-  const client = requireSupabase();
-  const {
-    data: { session },
-    error,
-  } = await client.auth.getSession();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!session?.access_token) {
-    throw new Error('You must be signed in to load participant data.');
-  }
-
   const participantBundleUrl = (import.meta.env.VITE_PARTICIPANT_BUNDLE_API_URL || '').trim() || '/api/participant-bundle';
-  const response = await fetch(participantBundleUrl, {
+  const response = await authorizedFetch(participantBundleUrl, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
+  }, 'You must be signed in to load participant data.');
 
   const text = await response.text();
   const data = tryParseJson(text);
@@ -799,15 +854,6 @@ export async function deleteQuestion(questionId: string) {
 }
 
 export async function submitRound(roundId: string, answers: Record<string, string>) {
-  const client = requireSupabase();
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error('You must be signed in to submit a round.');
-  }
-
   const submitUrl = (import.meta.env.VITE_SUBMIT_API_URL || '').trim() || '/api/submit-round';
   const payload = {
     roundId,
@@ -817,14 +863,13 @@ export async function submitRound(roundId: string, answers: Record<string, strin
     })),
   };
 
-  const response = await fetch(submitUrl, {
+  const response = await authorizedFetch(submitUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify(payload),
-  });
+  }, 'You must be signed in to submit a round.');
 
   const text = await response.text();
   const data = tryParseJson(text);
@@ -859,28 +904,18 @@ export async function runAdminRoundAction(
   action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration',
   payload?: { timerMinutes?: number },
 ) {
-  const client = requireSupabase();
-  const {
-    data: { session },
-  } = await client.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error('You must be signed in as an admin to manage rounds.');
-  }
-
   const adminRoundActionUrl = (import.meta.env.VITE_ADMIN_ROUND_ACTION_API_URL || '').trim() || '/api/admin-round-action';
-  const response = await fetch(adminRoundActionUrl, {
+  const response = await authorizedFetch(adminRoundActionUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
       roundId,
       action,
       timerMinutes: payload?.timerMinutes,
     }),
-  });
+  }, 'You must be signed in as an admin to manage rounds.');
 
   const text = await response.text();
   const data = tryParseJson(text);

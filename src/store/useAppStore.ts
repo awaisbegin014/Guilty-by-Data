@@ -1078,6 +1078,7 @@ export const useAppStore = create<AppState>()(
 
         try {
           await runAdminRoundActionRequest(roundId, action, payload);
+          await get().refreshAdminData();
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Round action failed.',

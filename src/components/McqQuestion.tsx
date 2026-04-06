@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { RichQuestionText } from './RichQuestionText';
 
 interface Option {
     id: string;
@@ -29,9 +30,10 @@ export const McqQuestion: React.FC<McqQuestionProps> = ({
                 <div className="w-9 h-9 rounded border border-border bg-slate-900/60 flex items-center justify-center text-primary font-mono font-black text-[0.65rem] shrink-0 mt-0.5">
                     P{questionNumber}
                 </div>
-                <h2 className="text-lg font-black text-white leading-snug tracking-tight pt-1">
-                    {questionText}
-                </h2>
+                <RichQuestionText
+                    content={questionText}
+                    className="pt-1 text-white"
+                />
             </div>
 
             {/* ── Options Section ── */}

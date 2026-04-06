@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type User } from '@supabase/supabase-js';
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -173,7 +173,7 @@ async function seedTeams(): Promise<void> {
           const { data: listData, error: listErr } =
             await supabase.auth.admin.listUsers({ perPage: 1000 });
           if (listErr) throw listErr;
-          const existing = listData.users.find((u) => u.email === email);
+          const existing = (listData.users as User[]).find((u) => u.email === email);
           if (!existing) {
             throw new Error(`User with email ${email} not found after conflict`);
           }

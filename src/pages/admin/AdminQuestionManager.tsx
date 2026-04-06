@@ -3,6 +3,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { Edit3, Trash2, Plus, Check, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Question } from '../../types';
+import { RichQuestionText } from '../../components/RichQuestionText';
 
 function buildNewQuestion(roundId: string, questionIndex: number): Question {
     const newId = `temp-${Date.now()}`;
@@ -179,10 +180,21 @@ export const AdminQuestionManager: React.FC = () => {
                                         <div>
                                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Question Text</label>
                                             <textarea
-                                                className="w-full px-3.5 py-2.5 border border-slate-700 rounded-[10px] text-sm text-slate-100 bg-slate-950 outline-none focus:border-primary min-h-[80px]"
+                                                className="w-full min-h-[180px] resize-y rounded-[10px] border border-slate-700 bg-slate-950 px-3.5 py-3 font-mono text-sm text-slate-100 outline-none focus:border-primary"
                                                 value={editForm.text}
                                                 onChange={(event) => setEditForm({ ...editForm, text: event.target.value })}
+                                                spellCheck={false}
                                             />
+                                            <p className="mt-2 text-[0.68rem] font-bold uppercase tracking-wider text-slate-500">
+                                                Plain text keeps line breaks. HTML tags such as h3, p, ul, li, strong, code, and br will render in preview and participant view.
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Rendered Preview</label>
+                                            <div className="rounded-[14px] border border-slate-800 bg-slate-950/70 px-4 py-4">
+                                                <RichQuestionText content={editForm.text ?? ''} className="text-slate-100" />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-3">
@@ -238,7 +250,7 @@ export const AdminQuestionManager: React.FC = () => {
                                         <div className="shrink-0 w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-xs font-bold text-slate-400">
                                             {qIndex + 1}
                                         </div>
-                                        <p className="text-[0.95rem] font-bold text-slate-100 leading-snug pt-0.5">{question.text}</p>
+                                        <RichQuestionText content={question.text} className="pt-0.5 text-slate-100" />
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => startEditing(question)} className="p-2 h-8 w-8 bg-slate-900 border border-slate-700 rounded-lg text-slate-400 hover:text-white hover:border-primary transition-all cursor-pointer">
