@@ -53,6 +53,7 @@ const AppRoutes: React.FC = () => {
     refreshAdminData,
     syncServerClock,
     syncCorrectAnswerRecord,
+    syncBlankQuestionRuleRecord,
     syncLeaderboardRecord,
     syncOptionRecord,
     syncQuestionRecord,
@@ -211,6 +212,21 @@ const AppRoutes: React.FC = () => {
       syncCorrectAnswerRecord(payload.eventType, row as unknown as Parameters<typeof syncCorrectAnswerRecord>[1]);
     };
 
+    const handleBlankQuestionRuleRecord = (
+      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
+    ) => {
+      syncServerClock(payload.commit_timestamp);
+      const row = getSyncRow(payload);
+      if (!row.question_id) {
+        return;
+      }
+
+      syncBlankQuestionRuleRecord(
+        payload.eventType,
+        row as unknown as Parameters<typeof syncBlankQuestionRuleRecord>[1],
+      );
+    };
+
     let channel = client
       .channel(`app-sync:${team?.id ?? 'admin'}`)
       .on(
@@ -253,6 +269,11 @@ const AppRoutes: React.FC = () => {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'correct_answers' },
           handleCorrectAnswerRecord,
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'blank_question_rules' },
+          handleBlankQuestionRuleRecord,
         );
     }
 
@@ -272,8 +293,10 @@ const AppRoutes: React.FC = () => {
     };
   }, [
     isAdmin,
+    refreshAdminData,
     syncServerClock,
     syncCorrectAnswerRecord,
+    syncBlankQuestionRuleRecord,
     syncLeaderboardRecord,
     syncOptionRecord,
     syncQuestionRecord,

@@ -4,8 +4,9 @@ import { authenticateRequest, readBody, sendJson } from './_lib/server.js';
 
 interface AdminRoundActionBody {
   roundId?: string;
-  action?: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration';
+  action?: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration' | 'set_grace_duration';
   timerMinutes?: number;
+  submissionGraceSeconds?: number;
 }
 
 function mapRpcError(error: PostgrestError) {
@@ -67,6 +68,8 @@ export default async function handler(
 
   const rpcPayload = payload.action === 'set_timer_duration'
     ? { timerMinutes: payload.timerMinutes ?? null }
+    : payload.action === 'set_grace_duration'
+      ? { submissionGraceSeconds: payload.submissionGraceSeconds ?? null }
     : {};
 
   const { error } = await auth.supabase.rpc('apply_admin_round_action', {

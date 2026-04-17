@@ -11,7 +11,24 @@ export interface AdminUser {
   displayName: string | null;
 }
 
-export type AdminRoundAction = 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration';
+export type AdminRoundAction =
+  | 'unlock_round'
+  | 'lock_round'
+  | 'start_timer'
+  | 'pause_timer'
+  | 'resume_timer'
+  | 'reset_round'
+  | 'set_timer_duration'
+  | 'set_grace_duration';
+
+export interface BlankQuestionRule {
+  correctAnswer: number;
+  rangeStart: number;
+  rangeEnd: number;
+  exactScore: number;
+  minScore: number;
+  curvePower: number;
+}
 
 export interface Option {
   id: string;
@@ -29,6 +46,7 @@ export interface Question {
   correctOptionId?: string | null;
   type?: 'mcq' | 'blank';
   inputType?: 'int' | 'float' | 'string' | null;
+  blankRule?: BlankQuestionRule | null;
 }
 
 export interface Round {
@@ -48,6 +66,9 @@ export interface Round {
   timerState: 'idle' | 'running' | 'paused' | 'expired';
   timerDurationSeconds: number;
   timerRemainingSeconds: number | null;
+  submissionGraceSeconds: number;
+  submissionEndsAt: string | null;
+  submissionRemainingSeconds: number | null;
   startsAt: string | null;
   endsAt: string | null;
   questionCount: number;

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Clock, AlertTriangle, PauseCircle, Lock, Radar } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { cn } from '@/lib/utils';
-import { getEffectiveTimerState } from '../lib/roundState';
+import { getParticipantTimerPhase } from '../lib/roundState';
 
 interface TimerBannerProps {
     roundId: string;
@@ -13,17 +13,21 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     const progress = roundsProgress[roundId];
     const round = rounds.find((item) => item.id === roundId);
     const [now, setNow] = useState(() => Date.now() + serverTimeOffsetMs);
-    const timerState = round ? getEffectiveTimerState(round, now) : null;
-    const timeLeftSeconds = timerState === 'running' && round?.endsAt
+    const timerPhase = round ? getParticipantTimerPhase(round, now) : null;
+    const visibleTimeLeftSeconds = timerPhase?.startsWith('running') && round?.endsAt
         ? Math.max(0, Math.floor((new Date(round.endsAt).getTime() - now) / 1000))
         : round?.timerRemainingSeconds ?? null;
+    const graceTimeLeftSeconds = timerPhase === 'running-grace' && round?.submissionEndsAt
+        ? Math.max(0, Math.floor((new Date(round.submissionEndsAt).getTime() - now) / 1000))
+        : round?.submissionRemainingSeconds ?? null;
+    const pausedTimeLeftSeconds = round?.submissionRemainingSeconds ?? round?.timerRemainingSeconds ?? null;
 
     useEffect(() => {
         const timeout = window.setTimeout(() => {
             setNow(Date.now() + serverTimeOffsetMs);
         }, 0);
         return () => window.clearTimeout(timeout);
-    }, [round?.endsAt, round?.timerState, serverTimeOffsetMs]);
+    }, [round?.endsAt, round?.submissionEndsAt, round?.timerState, serverTimeOffsetMs]);
 
     useEffect(() => {
         if (!round || progress?.status === 'submitted') return;
@@ -31,8 +35,8 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         const interval = setInterval(() => {
             const nextNow = Date.now() + serverTimeOffsetMs;
             setNow(nextNow);
-            if (round.endsAt && round.timerState === 'running') {
-                const nextTime = Math.max(0, new Date(round.endsAt).getTime() - nextNow);
+            if (round.submissionEndsAt && round.timerState === 'running') {
+                const nextTime = Math.max(0, new Date(round.submissionEndsAt).getTime() - nextNow);
                 if (nextTime === 0) {
                     clearInterval(interval);
                     recomputeParticipantState();
@@ -56,7 +60,7 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     }
 
     // ── Idle ──
-    if (timerState === 'idle') {
+    if (timerPhase === 'idle') {
         return (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-slate-900/80">
                 <Radar size={11} className="text-primary shrink-0" />
@@ -66,9 +70,9 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     }
 
     // ── Paused ──
-    if (timerState === 'paused') {
-        const minutes = Math.floor((timeLeftSeconds ?? 0) / 60);
-        const seconds = Math.floor((timeLeftSeconds ?? 0) % 60);
+    if (timerPhase === 'paused') {
+        const minutes = Math.floor((pausedTimeLeftSeconds ?? 0) / 60);
+        const seconds = Math.floor((pausedTimeLeftSeconds ?? 0) % 60);
         return (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10">
                 <PauseCircle size={11} className="text-amber-400 shrink-0" />
@@ -82,7 +86,7 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
     }
 
     // ── Expired ──
-    if (timerState === 'expired') {
+    if (timerPhase === 'expired') {
         return (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-700 bg-red-600/90">
                 <AlertTriangle size={11} className="text-white shrink-0" />
@@ -91,12 +95,31 @@ export const TimerBanner: React.FC<TimerBannerProps> = ({ roundId }) => {
         );
     }
 
-    if (timeLeftSeconds === null) return null;
+    if (timerPhase === 'running-grace') {
+        const graceSeconds = graceTimeLeftSeconds ?? 0;
+        const minutes = Math.floor(graceSeconds / 60);
+        const seconds = Math.floor(graceSeconds % 60);
 
-    const minutes = Math.floor(timeLeftSeconds / 60);
-    const seconds = Math.floor(timeLeftSeconds % 60);
-    const isWarning = timeLeftSeconds < 300;
-    const isCritical = timeLeftSeconds < 60;
+        return (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-700 bg-red-600/90 text-white">
+                <AlertTriangle size={11} className="shrink-0 animate-pulse" />
+                <span className="text-[0.5rem] font-black font-mono uppercase tracking-widest opacity-80">
+                    Grace
+                </span>
+                <span className="text-[0.5rem] opacity-30 font-mono">|</span>
+                <span className="font-mono text-[0.85rem] font-black tracking-widest animate-pulse">
+                    {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
+                </span>
+            </div>
+        );
+    }
+
+    if (visibleTimeLeftSeconds === null) return null;
+
+    const minutes = Math.floor(visibleTimeLeftSeconds / 60);
+    const seconds = Math.floor(visibleTimeLeftSeconds % 60);
+    const isWarning = visibleTimeLeftSeconds < 300;
+    const isCritical = visibleTimeLeftSeconds < 60;
 
     return (
         <div className={cn(

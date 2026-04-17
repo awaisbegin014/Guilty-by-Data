@@ -20,6 +20,8 @@ import { competitionConfig } from '../config/competitionConfig';
 import { deriveParticipantRoundStatus, isRoundPlayable } from '../lib/roundState';
 import type {
   AdminUser,
+  AdminRoundAction,
+  BlankQuestionRule,
   LeaderboardEntry,
   Option,
   Question,
@@ -46,6 +48,8 @@ interface RoundPublicStateSyncRow {
   starts_at: string | null;
   ends_at: string | null;
   timer_remaining_seconds: number | null;
+  submission_ends_at: string | null;
+  submission_remaining_seconds: number | null;
 }
 
 interface RoundSyncRow {
@@ -61,6 +65,9 @@ interface RoundSyncRow {
   timer_state: Round['timerState'];
   timer_duration_seconds: number;
   timer_remaining_seconds: number | null;
+  submission_grace_seconds: number | null;
+  submission_ends_at: string | null;
+  submission_remaining_seconds: number | null;
   starts_at: string | null;
   ends_at: string | null;
   documentation: unknown;
@@ -86,6 +93,16 @@ interface OptionSyncRow {
 interface CorrectAnswerSyncRow {
   question_id: string;
   answer_value: string;
+}
+
+interface BlankQuestionRuleSyncRow {
+  question_id: string;
+  correct_answer: number;
+  range_start: number;
+  range_end: number;
+  exact_score: number;
+  min_score: number;
+  curve_power: number;
 }
 
 interface SubmissionSyncRow {
@@ -158,6 +175,17 @@ function sortOptions(options: Option[]) {
   return options
     .slice()
     .sort((left, right) => (left.orderIndex ?? Number.MAX_SAFE_INTEGER) - (right.orderIndex ?? Number.MAX_SAFE_INTEGER));
+}
+
+function toBlankQuestionRule(row: BlankQuestionRuleSyncRow): BlankQuestionRule {
+  return {
+    correctAnswer: row.correct_answer,
+    rangeStart: row.range_start,
+    rangeEnd: row.range_end,
+    exactScore: row.exact_score,
+    minScore: row.min_score,
+    curvePower: row.curve_power,
+  };
 }
 
 function normalizeLeaderboardEntries(entries: LeaderboardEntry[]) {
@@ -283,17 +311,18 @@ interface AppState {
   syncQuestionRecord: (eventType: SyncEventType, row: QuestionSyncRow) => void;
   syncOptionRecord: (eventType: SyncEventType, row: OptionSyncRow) => void;
   syncCorrectAnswerRecord: (eventType: SyncEventType, row: CorrectAnswerSyncRow) => void;
+  syncBlankQuestionRuleRecord: (eventType: SyncEventType, row: BlankQuestionRuleSyncRow) => void;
   syncSubmissionRecord: (eventType: SyncEventType, row: SubmissionSyncRow) => void;
   syncLeaderboardRecord: (eventType: SyncEventType, row: LeaderboardSyncRow) => void;
-  setAnswer: (roundId: string, questionId: string, optionId: string) => void;
+  setAnswer: (roundId: string, questionId: string, answerValue: string) => void;
   markDocsVisited: (roundId: string) => void;
   markResourceViewed: (roundId: string) => void;
   submitRound: (roundId: string) => Promise<void>;
   updateRound: (roundId: string, updates: Partial<Round>) => Promise<void>;
   runAdminRoundAction: (
     roundId: string,
-    action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration',
-    payload?: { timerMinutes?: number },
+    action: AdminRoundAction,
+    payload?: { timerMinutes?: number; submissionGraceSeconds?: number },
   ) => Promise<void>;
   saveQuestion: (roundId: string, question: Question) => Promise<void>;
   deleteQuestion: (questionId: string) => Promise<void>;
@@ -342,6 +371,8 @@ function applyRoundPublicState(rounds: Round[], row: RoundPublicStateSyncRow) {
       timerMinutes: row.timer_minutes,
       timerState: row.timer_state,
       timerRemainingSeconds: row.timer_remaining_seconds,
+      submissionEndsAt: row.submission_ends_at,
+      submissionRemainingSeconds: row.submission_remaining_seconds,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
     }
@@ -359,6 +390,9 @@ function applyRoundPublicState(rounds: Round[], row: RoundPublicStateSyncRow) {
       timerState: row.timer_state,
       timerDurationSeconds: row.timer_minutes * 60,
       timerRemainingSeconds: row.timer_remaining_seconds,
+      submissionGraceSeconds: 60,
+      submissionEndsAt: row.submission_ends_at,
+      submissionRemainingSeconds: row.submission_remaining_seconds,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       questionCount: 0,
@@ -394,6 +428,9 @@ function applyRoundRecord(rounds: Round[], eventType: SyncEventType, row: RoundS
       timerState: row.timer_state,
       timerDurationSeconds: row.timer_duration_seconds,
       timerRemainingSeconds: row.timer_remaining_seconds,
+      submissionGraceSeconds: row.submission_grace_seconds ?? existing.submissionGraceSeconds,
+      submissionEndsAt: row.submission_ends_at,
+      submissionRemainingSeconds: row.submission_remaining_seconds,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       contentVisible: true,
@@ -412,6 +449,9 @@ function applyRoundRecord(rounds: Round[], eventType: SyncEventType, row: RoundS
       timerState: row.timer_state,
       timerDurationSeconds: row.timer_duration_seconds,
       timerRemainingSeconds: row.timer_remaining_seconds,
+      submissionGraceSeconds: row.submission_grace_seconds ?? 60,
+      submissionEndsAt: row.submission_ends_at,
+      submissionRemainingSeconds: row.submission_remaining_seconds,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       questionCount: 0,
@@ -458,6 +498,7 @@ function applyQuestionRecord(rounds: Round[], eventType: SyncEventType, row: Que
         text: row.text,
         type: row.type,
         inputType: row.input_type,
+        blankRule: existing.blankRule ?? null,
       }
       : {
         id: row.id,
@@ -468,6 +509,7 @@ function applyQuestionRecord(rounds: Round[], eventType: SyncEventType, row: Que
         correctOptionId: null,
         type: row.type,
         inputType: row.input_type,
+        blankRule: null,
       };
 
     const nextQuestions = sortQuestions([...round.questions.filter((question) => question.id !== row.id), nextQuestion]);
@@ -525,6 +567,26 @@ function applyCorrectAnswerRecord(rounds: Round[], eventType: SyncEventType, row
       return {
         ...question,
         correctOptionId: eventType === 'DELETE' ? null : row.answer_value,
+      };
+    }),
+  })));
+}
+
+function applyBlankQuestionRuleRecord(
+  rounds: Round[],
+  eventType: SyncEventType,
+  row: BlankQuestionRuleSyncRow,
+) {
+  return sortRounds(rounds.map((round) => ({
+    ...round,
+    questions: round.questions.map((question) => {
+      if (question.id !== row.question_id) {
+        return question;
+      }
+
+      return {
+        ...question,
+        blankRule: eventType === 'DELETE' ? null : toBlankQuestionRule(row),
       };
     }),
   })));
@@ -906,6 +968,12 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
+      syncBlankQuestionRuleRecord: (eventType, row) => {
+        set((state) => ({
+          rounds: applyBlankQuestionRuleRecord(state.rounds, eventType, row),
+        }));
+      },
+
       syncSubmissionRecord: (eventType, row) => {
         set((state) => {
           const submissionsByRound = applySubmissionRecord(state.submissionsByRound, eventType, row);
@@ -927,18 +995,24 @@ export const useAppStore = create<AppState>()(
         }));
       },
 
-      setAnswer: (roundId, questionId, optionId) => {
+      setAnswer: (roundId, questionId, answerValue) => {
         set((state) => {
           const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
+          const nextAnswers = {
+            ...existing.answers,
+          };
+
+          if (answerValue.trim()) {
+            nextAnswers[questionId] = answerValue;
+          } else {
+            delete nextAnswers[questionId];
+          }
 
           const draftProgressByRound = {
             ...state.draftProgressByRound,
             [roundId]: {
               ...existing,
-              answers: {
-                ...existing.answers,
-                [questionId]: optionId,
-              },
+              answers: nextAnswers,
             },
           };
 

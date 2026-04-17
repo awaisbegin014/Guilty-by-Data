@@ -5,6 +5,7 @@ import { competitionConfig } from '../../config/competitionConfig';
 import { Button } from '../../components/ui/Button';
 import { TimerBanner } from '../../components/TimerBanner';
 import { McqQuestion } from '../../components/McqQuestion';
+import { BlankQuestion } from '../../components/BlankQuestion';
 import { ArrowLeft, ArrowRight, AlertTriangle, Fingerprint, Database, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { canAccessRoundRoute } from '../../lib/roundState';
@@ -39,13 +40,13 @@ export const QuestionPage: React.FC = () => {
     }
 
     const question = round.questions[qIndex];
-    const selectedOptionId = progress?.answers?.[question.id];
+    const selectedAnswerValue = progress?.answers?.[question.id] ?? '';
     const isBidirectional = competitionConfig.questionNavigationMode === 'bidirectional';
     const isLastQuestion = qIndex === round.questions.length - 1;
     const isFirstQuestion = qIndex === 0;
 
-    const handleOptionSelect = (optionId: string) => {
-        setAnswer(round.id, question.id, optionId);
+    const handleAnswerChange = (answerValue: string) => {
+        setAnswer(round.id, question.id, answerValue);
     };
 
     const handleNext = () => {
@@ -119,13 +120,23 @@ export const QuestionPage: React.FC = () => {
 
                 {/* Main Question Dossier */}
                 <div className="mb-3 flex-1 overflow-y-auto min-h-0">
-                    <McqQuestion
-                        questionNumber={qIndex + 1}
-                        questionText={question.text}
-                        options={question.options}
-                        selectedOptionId={selectedOptionId}
-                        onSelect={handleOptionSelect}
-                    />
+                    {question.type === 'blank' && (question.inputType === 'int' || question.inputType === 'float') ? (
+                        <BlankQuestion
+                            questionNumber={qIndex + 1}
+                            questionText={question.text}
+                            inputType={question.inputType}
+                            value={selectedAnswerValue}
+                            onChange={handleAnswerChange}
+                        />
+                    ) : (
+                        <McqQuestion
+                            questionNumber={qIndex + 1}
+                            questionText={question.text}
+                            options={question.options}
+                            selectedOptionId={selectedAnswerValue}
+                            onSelect={handleAnswerChange}
+                        />
+                    )}
                 </div>
 
                 {/* Navigation / Action Bar */}

@@ -15,11 +15,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '../../store/useAppStore';
-import { getEffectiveTimerState } from '../../lib/roundState';
+import { getEffectiveTimerState, getParticipantTimerPhase } from '../../lib/roundState';
 import type { AdminRoundAction } from '../../types';
 
 const inputClass = 'w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-100 outline-none transition-colors focus:border-primary';
 const labelClass = 'mb-2 block text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400';
+
+function formatClock(seconds: number) {
+  const safeSeconds = Math.max(0, seconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainder = safeSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+}
 
 export const AdminRoundManager: React.FC = () => {
   const { rounds, updateRound, runAdminRoundAction, error, serverTimeOffsetMs } = useAppStore();
@@ -35,6 +42,7 @@ export const AdminRoundManager: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [zipPassword, setZipPassword] = useState('');
   const [timerMinutes, setTimerMinutes] = useState('');
+  const [graceSeconds, setGraceSeconds] = useState('');
   const [now, setNow] = useState(() => Date.now() + serverTimeOffsetMs);
 
   useEffect(() => {
@@ -56,6 +64,7 @@ export const AdminRoundManager: React.FC = () => {
     setEditDescription(activeRound.description);
     setZipPassword(activeRound.zipPassword ?? '');
     setTimerMinutes(String(activeRound.timerMinutes));
+    setGraceSeconds(String(activeRound.submissionGraceSeconds));
   }, [activeRound]);
 
   useEffect(() => {
@@ -64,7 +73,7 @@ export const AdminRoundManager: React.FC = () => {
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, [activeRound?.endsAt, activeRound?.timerState, serverTimeOffsetMs]);
+  }, [activeRound?.endsAt, activeRound?.submissionEndsAt, activeRound?.timerState, serverTimeOffsetMs]);
 
   useEffect(() => {
     if (!activeRound || activeRound.timerState !== 'running') {
@@ -83,17 +92,25 @@ export const AdminRoundManager: React.FC = () => {
   }
 
   const effectiveTimerState = getEffectiveTimerState(activeRound, now);
+  const timerPhase = getParticipantTimerPhase(activeRound, now);
   const startResumeAction: AdminRoundAction = effectiveTimerState === 'paused' ? 'resume_timer' : 'start_timer';
   const isUnlocked = activeRound.status === 'open';
-  const remainingSeconds = effectiveTimerState === 'running' && activeRound.endsAt
+  const visibleRemainingSeconds = timerPhase === 'running-visible' && activeRound.endsAt
     ? Math.max(0, Math.floor((new Date(activeRound.endsAt).getTime() - now) / 1000))
-    : activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds;
-  const remainingMinutes = Math.floor(remainingSeconds / 60);
-  const remainingDisplaySeconds = remainingSeconds % 60;
+    : timerPhase === 'running-grace'
+      ? 0
+      : activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds;
+  const submissionRemainingSeconds = effectiveTimerState === 'running' && activeRound.submissionEndsAt
+    ? Math.max(0, Math.floor((new Date(activeRound.submissionEndsAt).getTime() - now) / 1000))
+    : activeRound.submissionRemainingSeconds ?? (activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds) + activeRound.submissionGraceSeconds;
+  const hiddenGraceRemainingSeconds = Math.max(submissionRemainingSeconds - visibleRemainingSeconds, 0);
   const isResetState = effectiveTimerState === 'idle'
     && activeRound.startsAt === null
     && activeRound.endsAt === null
-    && (activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds) === activeRound.timerDurationSeconds;
+    && activeRound.submissionEndsAt === null
+    && (activeRound.timerRemainingSeconds ?? activeRound.timerDurationSeconds) === activeRound.timerDurationSeconds
+    && (activeRound.submissionRemainingSeconds ?? activeRound.timerDurationSeconds + activeRound.submissionGraceSeconds)
+      === activeRound.timerDurationSeconds + activeRound.submissionGraceSeconds;
 
   const beginContentEdit = () => {
     setEditTitle(activeRound.title);
@@ -132,7 +149,7 @@ export const AdminRoundManager: React.FC = () => {
 
   const handleRoundAction = async (
     action: AdminRoundAction,
-    payload?: { timerMinutes?: number },
+    payload?: { timerMinutes?: number; submissionGraceSeconds?: number },
   ) => {
     setIsRunningAction(true);
     try {
@@ -156,8 +173,8 @@ export const AdminRoundManager: React.FC = () => {
     {
       label: 'Start / Resume',
       description: effectiveTimerState === 'paused'
-        ? 'Continues a paused timer from the remaining time.'
-        : 'Starts a fresh timer from the configured default duration.',
+        ? 'Continues from the preserved visible and submission windows.'
+        : 'Starts a fresh visible timer plus the configured hidden grace window.',
       icon: <PlayCircle size={16} />,
       disabled: !isUnlocked || isRunningAction || !['idle', 'expired', 'paused'].includes(effectiveTimerState),
       onClick: () => void handleRoundAction(startResumeAction),
@@ -165,7 +182,7 @@ export const AdminRoundManager: React.FC = () => {
     },
     {
       label: 'Pause Timer',
-      description: 'Freezes the active timer and preserves the remaining time.',
+      description: 'Freezes both the visible timer and the final submission window.',
       icon: <PauseCircle size={16} />,
       disabled: !isUnlocked || isRunningAction || effectiveTimerState !== 'running',
       onClick: () => void handleRoundAction('pause_timer'),
@@ -173,7 +190,7 @@ export const AdminRoundManager: React.FC = () => {
     },
     {
       label: 'Reset Round',
-      description: 'Returns the timer to idle and restores the full default duration.',
+      description: 'Returns the round to idle and restores full visible plus grace durations.',
       icon: <RotateCcw size={16} />,
       disabled: isRunningAction || isResetState,
       onClick: () => void handleRoundAction('reset_round'),
@@ -253,10 +270,10 @@ export const AdminRoundManager: React.FC = () => {
                   <p className="mt-2 text-lg font-black text-white">{isUnlocked ? 'Unlocked' : 'Locked'}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
-                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-slate-500">Timer</p>
-                  <p className="mt-2 text-lg font-black capitalize text-white">{effectiveTimerState}</p>
+                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-slate-500">Timer Phase</p>
+                  <p className="mt-2 text-lg font-black capitalize text-white">{timerPhase.replace('-', ' ')}</p>
                   <p className="mt-1 text-xs font-mono text-slate-400">
-                    {remainingMinutes.toString().padStart(2, '0')}:{remainingDisplaySeconds.toString().padStart(2, '0')} remaining
+                    Visible {formatClock(visibleRemainingSeconds)} / Final {formatClock(submissionRemainingSeconds)}
                   </p>
                 </div>
               </div>
@@ -288,7 +305,7 @@ export const AdminRoundManager: React.FC = () => {
               <div>
                 <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Default Timer Duration</p>
                 <p className="mt-2 text-sm text-slate-400">
-                  This stays the admin-set default and resets the current timer window to the new duration.
+                  Editing the visible duration preserves elapsed visible time instead of restarting the round.
                 </p>
               </div>
               <div className="flex w-full max-w-md gap-3">
@@ -304,6 +321,37 @@ export const AdminRoundManager: React.FC = () => {
                 </div>
                 <button
                   onClick={() => void handleRoundAction('set_timer_duration', { timerMinutes: Number(timerMinutes) })}
+                  disabled={!isUnlocked || isRunningAction}
+                  className="inline-flex h-[46px] items-center justify-center gap-2 self-end rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-black text-white transition-colors hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <TimerReset size={16} />
+                  Apply
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-800 bg-slate-950/60 p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-slate-400">Hidden Grace Duration</p>
+                <p className="mt-2 text-sm text-slate-400">
+                  Grace edits preserve already elapsed hidden grace time and only shift the final submission cutoff.
+                </p>
+              </div>
+              <div className="flex w-full max-w-md gap-3">
+                <div className="flex-1">
+                  <label className={labelClass}>Seconds</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={graceSeconds}
+                    onChange={(event) => setGraceSeconds(event.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <button
+                  onClick={() => void handleRoundAction('set_grace_duration', { submissionGraceSeconds: Number(graceSeconds) })}
                   disabled={!isUnlocked || isRunningAction}
                   className="inline-flex h-[46px] items-center justify-center gap-2 self-end rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-black text-white transition-colors hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-45"
                 >
@@ -431,10 +479,19 @@ export const AdminRoundManager: React.FC = () => {
                     <span>Current timer snapshot</span>
                   </div>
                   <p className="mt-3 text-sm text-slate-300">
-                    State: <span className="font-black capitalize text-white">{effectiveTimerState}</span>
+                    State: <span className="font-black capitalize text-white">{timerPhase.replace('-', ' ')}</span>
                   </p>
                   <p className="mt-1 text-sm text-slate-300">
-                    Remaining: <span className="font-mono text-white">{remainingMinutes.toString().padStart(2, '0')}:{remainingDisplaySeconds.toString().padStart(2, '0')}</span>
+                    Visible remaining: <span className="font-mono text-white">{formatClock(visibleRemainingSeconds)}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Final submission window: <span className="font-mono text-white">{formatClock(submissionRemainingSeconds)}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Hidden grace remaining: <span className="font-mono text-white">{formatClock(hiddenGraceRemainingSeconds)}</span>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Configured grace: <span className="font-mono text-white">{activeRound.submissionGraceSeconds}s</span>
                   </p>
                 </div>
 

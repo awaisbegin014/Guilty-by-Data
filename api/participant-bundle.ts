@@ -15,6 +15,9 @@ interface RoundRow {
   timer_state: 'idle' | 'running' | 'paused' | 'expired';
   timer_duration_seconds: number;
   timer_remaining_seconds: number | null;
+  submission_grace_seconds: number | null;
+  submission_ends_at: string | null;
+  submission_remaining_seconds: number | null;
   starts_at: string | null;
   ends_at: string | null;
   documentation: unknown;
@@ -31,6 +34,8 @@ interface RoundPublicStateRow {
   starts_at: string | null;
   ends_at: string | null;
   timer_remaining_seconds: number | null;
+  submission_ends_at: string | null;
+  submission_remaining_seconds: number | null;
 }
 
 interface QuestionRow {
@@ -126,11 +131,11 @@ export default async function handler(request: NodeRequest, response: NodeRespon
   ] = await Promise.all([
     auth.supabase
       .from('rounds')
-      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, starts_at, ends_at, documentation')
+      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, submission_grace_seconds, submission_ends_at, submission_remaining_seconds, starts_at, ends_at, documentation')
       .order('order_index', { ascending: true }),
     auth.supabase
       .from('round_public_state')
-      .select('round_id, order_index, title, description, status, timer_minutes, timer_state, starts_at, ends_at, timer_remaining_seconds')
+      .select('round_id, order_index, title, description, status, timer_minutes, timer_state, starts_at, ends_at, timer_remaining_seconds, submission_ends_at, submission_remaining_seconds')
       .order('order_index', { ascending: true }),
     auth.supabase
       .from('questions')
@@ -211,6 +216,7 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       status: publicState?.status ?? row.status,
       timerState: publicState?.timer_state ?? row.timer_state,
       endsAt: publicState?.ends_at ?? row.ends_at,
+      submissionEndsAt: publicState?.submission_ends_at ?? row.submission_ends_at,
     };
     const status = deriveParticipantRoundStatus({
       round: participantRound,
@@ -251,6 +257,9 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       timerState: participantRound.timerState,
       timerDurationSeconds: row.timer_duration_seconds,
       timerRemainingSeconds: publicState?.timer_remaining_seconds ?? row.timer_remaining_seconds,
+      submissionGraceSeconds: row.submission_grace_seconds ?? 60,
+      submissionEndsAt: publicState?.submission_ends_at ?? row.submission_ends_at,
+      submissionRemainingSeconds: publicState?.submission_remaining_seconds ?? row.submission_remaining_seconds,
       startsAt: publicState?.starts_at ?? row.starts_at,
       endsAt: participantRound.endsAt,
       questionCount: roundQuestions.length,

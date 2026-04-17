@@ -1,5 +1,7 @@
 import type {
+  AdminRoundAction,
   AdminUser,
+  BlankQuestionRule,
   LeaderboardEntry,
   Question,
   Round,
@@ -39,6 +41,9 @@ interface RoundRow {
   timer_state: Round['timerState'];
   timer_duration_seconds: number;
   timer_remaining_seconds: number | null;
+  submission_grace_seconds: number | null;
+  submission_ends_at: string | null;
+  submission_remaining_seconds: number | null;
   starts_at: string | null;
   ends_at: string | null;
   documentation: unknown;
@@ -59,6 +64,16 @@ interface QuestionRow {
   text: string;
   type: 'mcq' | 'blank';
   input_type: 'int' | 'float' | 'string' | null;
+}
+
+interface BlankQuestionRuleRow {
+  question_id: string;
+  correct_answer: number;
+  range_start: number;
+  range_end: number;
+  exact_score: number;
+  min_score: number;
+  curve_power: number;
 }
 
 interface CorrectAnswerRow {
@@ -205,7 +220,7 @@ async function authorizedFetch(
     },
   };
 
-  let response = await fetch(url, requestInit);
+  const response = await fetch(url, requestInit);
 
   if (response.status !== 401) {
     return response;
@@ -271,6 +286,7 @@ function mapQuestions(
   rows: QuestionRow[],
   optionsByQuestionId: Map<string, OptionRow[]>,
   correctByQuestionId?: Map<string, string>,
+  blankRulesByQuestionId?: Map<string, BlankQuestionRule>,
 ) {
   return rows
     .slice()
@@ -295,6 +311,7 @@ function mapQuestions(
         correctOptionId: correctByQuestionId?.get(row.id) ?? null,
         type: row.type,
         inputType: row.input_type,
+        blankRule: blankRulesByQuestionId?.get(row.id) ?? null,
       };
     });
 }
@@ -304,6 +321,7 @@ function mapRounds(
   questionRows: QuestionRow[],
   optionRows: OptionRow[],
   correctRows?: CorrectAnswerRow[],
+  blankRuleRows?: BlankQuestionRuleRow[],
 ) {
   const optionsByQuestionId = new Map<string, OptionRow[]>();
   for (const option of optionRows) {
@@ -324,6 +342,18 @@ function mapRounds(
     correctByQuestionId.set(row.question_id, row.answer_value);
   }
 
+  const blankRulesByQuestionId = new Map<string, BlankQuestionRule>();
+  for (const row of blankRuleRows ?? []) {
+    blankRulesByQuestionId.set(row.question_id, {
+      correctAnswer: row.correct_answer,
+      rangeStart: row.range_start,
+      rangeEnd: row.range_end,
+      exactScore: row.exact_score,
+      minScore: row.min_score,
+      curvePower: row.curve_power,
+    });
+  }
+
   return roundRows
     .slice()
     .sort((left, right) => left.order_index - right.order_index)
@@ -342,6 +372,9 @@ function mapRounds(
         timerState: row.timer_state,
         timerDurationSeconds: row.timer_duration_seconds,
         timerRemainingSeconds: row.timer_remaining_seconds,
+        submissionGraceSeconds: row.submission_grace_seconds ?? 60,
+        submissionEndsAt: row.submission_ends_at,
+        submissionRemainingSeconds: row.submission_remaining_seconds,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
         questionCount: (questionsByRoundId.get(row.id) ?? []).length,
@@ -350,6 +383,7 @@ function mapRounds(
           questionsByRoundId.get(row.id) ?? [],
           optionsByQuestionId,
           correctRows ? correctByQuestionId : undefined,
+          blankRuleRows ? blankRulesByQuestionId : undefined,
         ),
       };
     });
@@ -361,7 +395,7 @@ async function loadRoundRows() {
   const [roundsResult, questionsResult, optionsResult] = await Promise.all([
     client
       .from('rounds')
-      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, starts_at, ends_at, documentation'),
+      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, submission_grace_seconds, submission_ends_at, submission_remaining_seconds, starts_at, ends_at, documentation'),
     client
       .from('questions')
       .select('id, round_id, order_index, text, type, input_type'),
@@ -595,12 +629,21 @@ export async function fetchServerTime() {
 export async function fetchAdminRounds() {
   const client = requireSupabase();
   const rows = await loadRoundRows();
-  const correctAnswersResult = await client
-    .from('correct_answers')
-    .select('question_id, answer_value');
+  const [correctAnswersResult, blankQuestionRulesResult] = await Promise.all([
+    client
+      .from('correct_answers')
+      .select('question_id, answer_value'),
+    client
+      .from('blank_question_rules')
+      .select('question_id, correct_answer, range_start, range_end, exact_score, min_score, curve_power'),
+  ]);
 
   if (correctAnswersResult.error) {
     throw correctAnswersResult.error;
+  }
+
+  if (blankQuestionRulesResult.error) {
+    throw blankQuestionRulesResult.error;
   }
 
   return mapRounds(
@@ -608,6 +651,7 @@ export async function fetchAdminRounds() {
     rows.questionRows,
     rows.optionRows,
     (correctAnswersResult.data ?? []) as CorrectAnswerRow[],
+    (blankQuestionRulesResult.data ?? []) as BlankQuestionRuleRow[],
   );
 }
 
@@ -692,13 +736,17 @@ export async function updateRound(roundId: string, updates: Partial<Round>) {
 export async function saveQuestion(roundId: string, question: Question) {
   const client = requireSupabase();
   const isExistingQuestion = UUID_RE.test(question.id);
+  const questionType = question.type ?? 'mcq';
+  const inputType = questionType === 'blank'
+    ? (question.inputType === 'int' || question.inputType === 'float' ? question.inputType : 'int')
+    : null;
 
   const questionPayload = {
     round_id: roundId,
     order_index: question.questionIndex,
-    type: question.type ?? 'mcq',
+    type: questionType,
     text: question.text,
-    input_type: question.inputType ?? null,
+    input_type: inputType,
   };
 
   let persistedQuestionId = question.id;
@@ -724,6 +772,61 @@ export async function saveQuestion(roundId: string, question: Question) {
     }
 
     persistedQuestionId = data.id;
+  }
+
+  if (questionType === 'blank') {
+    const blankRule = question.blankRule;
+    if (!blankRule) {
+      throw new Error('Blank questions require a scoring rule before saving.');
+    }
+
+    const [deleteOptionsResult, deleteCorrectAnswerResult, blankRuleResult] = await Promise.all([
+      client
+        .from('options')
+        .delete()
+        .eq('question_id', persistedQuestionId),
+      client
+        .from('correct_answers')
+        .delete()
+        .eq('question_id', persistedQuestionId),
+      client
+        .from('blank_question_rules')
+        .upsert(
+          {
+            question_id: persistedQuestionId,
+            correct_answer: blankRule.correctAnswer,
+            range_start: blankRule.rangeStart,
+            range_end: blankRule.rangeEnd,
+            exact_score: blankRule.exactScore,
+            min_score: blankRule.minScore,
+            curve_power: blankRule.curvePower,
+          },
+          { onConflict: 'question_id' },
+        ),
+    ]);
+
+    if (deleteOptionsResult.error) {
+      throw deleteOptionsResult.error;
+    }
+
+    if (deleteCorrectAnswerResult.error) {
+      throw deleteCorrectAnswerResult.error;
+    }
+
+    if (blankRuleResult.error) {
+      throw blankRuleResult.error;
+    }
+
+    return;
+  }
+
+  const blankRuleDeleteResult = await client
+    .from('blank_question_rules')
+    .delete()
+    .eq('question_id', persistedQuestionId);
+
+  if (blankRuleDeleteResult.error) {
+    throw blankRuleDeleteResult.error;
   }
 
   const existingOptionsResult = await client
@@ -824,20 +927,31 @@ export async function saveQuestion(roundId: string, question: Question) {
     ? localToPersistedId.get(question.correctOptionId) ?? question.correctOptionId
     : null;
 
-  if (resolvedCorrectOptionId) {
-    const { error } = await client
+  if (!resolvedCorrectOptionId) {
+    const deleteCorrectAnswerResult = await client
       .from('correct_answers')
-      .upsert(
-        {
-          question_id: persistedQuestionId,
-          answer_value: resolvedCorrectOptionId,
-        },
-        { onConflict: 'question_id' },
-      );
+      .delete()
+      .eq('question_id', persistedQuestionId);
 
-    if (error) {
-      throw error;
+    if (deleteCorrectAnswerResult.error) {
+      throw deleteCorrectAnswerResult.error;
     }
+
+    return;
+  }
+
+  const { error } = await client
+    .from('correct_answers')
+    .upsert(
+      {
+        question_id: persistedQuestionId,
+        answer_value: resolvedCorrectOptionId,
+      },
+      { onConflict: 'question_id' },
+    );
+
+  if (error) {
+    throw error;
   }
 }
 
@@ -901,8 +1015,8 @@ export async function submitRound(roundId: string, answers: Record<string, strin
 
 export async function runAdminRoundAction(
   roundId: string,
-  action: 'unlock_round' | 'lock_round' | 'start_timer' | 'pause_timer' | 'resume_timer' | 'reset_round' | 'set_timer_duration',
-  payload?: { timerMinutes?: number },
+  action: AdminRoundAction,
+  payload?: { timerMinutes?: number; submissionGraceSeconds?: number },
 ) {
   const adminRoundActionUrl = (import.meta.env.VITE_ADMIN_ROUND_ACTION_API_URL || '').trim() || '/api/admin-round-action';
   const response = await authorizedFetch(adminRoundActionUrl, {
@@ -914,6 +1028,7 @@ export async function runAdminRoundAction(
       roundId,
       action,
       timerMinutes: payload?.timerMinutes,
+      submissionGraceSeconds: payload?.submissionGraceSeconds,
     }),
   }, 'You must be signed in as an admin to manage rounds.');
 
