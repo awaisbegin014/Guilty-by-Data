@@ -30,7 +30,7 @@ That means:
 
 For production on Vercel:
 
-1. Set the four env vars above in the Vercel project.
+1.  Set the four env vars above in the Vercel project.
 2. Apply any pending SQL files from `supabase/migrations/` in version order.
    For a fresh database, apply all migrations in order.
    For an existing database, apply only the migrations that have not been applied yet.
