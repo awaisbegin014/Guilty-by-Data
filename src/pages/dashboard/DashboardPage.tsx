@@ -50,24 +50,42 @@ export const DashboardPage: React.FC = () => {
                             </div>
                         </div>
                         
-                        <div className="p-10 space-y-12">
-                            <p className="text-lg text-slate-300 leading-relaxed font-medium max-w-4xl">
-                                <strong className="text-white">Victor Ashworth</strong>, billionaire founder of Ashworth Pharmaceuticals, has been murdered.
-                                <br /><br />
-                                Victor was found poisoned with a rare chemical called thallium sulfate. The doctor says the poison was given to him 3 to 4 days before he died. This means the killer planned it carefully. The killer works inside the company and knows a lot about chemicals. We have grabbed three big sets of data from the company's computers: employee records, money transactions, and secret emails. We need you to look at the clues. Follow the data. Find out who wanted him dead, how they got the poison, and who pulled the trigger.
-                            </p>
+                        <div className="p-10 space-y-8">
+                            {/* Description Section */}
+                            <div className="relative pl-6">
+                                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-500/50 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.3)]" />
+                                <h4 className="text-[0.65rem] font-black font-mono text-blue-400 uppercase tracking-[0.2em] mb-2">
+                                    Incident Description
+                                </h4>
+                                <p className="text-base text-slate-300 font-medium leading-relaxed">
+                                    Victor Ashworth, billionaire founder of Ashworth Pharmaceuticals, has been murdered.
+                                </p>
+                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                <div className="p-6 rounded-xl bg-slate-900/20 border border-border">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <Fingerprint size={18} className="text-primary" />
-                                        <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Primary Objective</h4>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                                        Identify the killer, the weapon, and the motive from the digital wreckage.
-                                    </p>
-                                </div>
-                                <div className="p-6 rounded-xl bg-slate-900/20 border border-border">
+                            {/* Objective Section */}
+                            <div className="relative pl-6">
+                                <div className="absolute left-0 top-1 bottom-1 w-[3px] bg-amber-500/50 rounded-full shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                                <h4 className="text-[0.65rem] font-black font-mono text-amber-500 uppercase tracking-[0.2em] mb-2">
+                                    Primary Objective
+                                </h4>
+                                <p className="text-base text-slate-300 font-medium leading-relaxed italic">
+                                    Identify the killer, the weapon, and the motive from the digital wreckage.
+                                </p>
+                            </div>
+
+                            {/* Case Brief Section */}
+                            <div className="relative bg-slate-950/50 p-6 sm:p-8 rounded-xl border border-slate-800/80 shadow-inner mt-4">
+                                <div className="absolute left-0 top-8 bottom-8 w-[4px] bg-primary/60 rounded-r-full shadow-[0_0_12px_rgba(74,124,157,0.4)]" />
+                                <h4 className="text-[0.65rem] font-black font-mono text-primary uppercase tracking-[0.2em] mb-4">
+                                    Detailed Case Briefing
+                                </h4>
+                                <p className="text-lg text-slate-200 leading-relaxed font-normal whitespace-pre-wrap selection:bg-primary/30">
+                                    Victor Ashworth was found poisoned with a rare chemical called thallium sulfate. The doctor says the poison was given to him 3 to 4 days before he died. This means the killer planned it carefully. The killer works inside the company and knows a lot about chemicals. We have grabbed three big sets of data from the company's computers: employee records, money transactions, and secret emails. We need you to look at the clues. Follow the data. Find out who wanted him dead, how they got the poison, and who pulled the trigger.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                                <div className="p-6 rounded-xl bg-slate-900/40 border border-border">
                                     <div className="flex items-center gap-3 mb-4">
                                         <BarChart4 size={18} className="text-primary" />
                                         <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Scope of Analysis</h4>
@@ -76,7 +94,7 @@ export const DashboardPage: React.FC = () => {
                                         Employee HR records, financial transactions, and internal communications.
                                     </p>
                                 </div>
-                                <div className="p-6 rounded-xl bg-slate-900/20 border border-border">
+                                <div className="p-6 rounded-xl bg-slate-900/40 border border-border">
                                     <div className="flex items-center gap-3 mb-4">
                                         <Target size={18} className="text-primary" />
                                         <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Intel Progress</h4>
