@@ -45,7 +45,7 @@ async function main() {
   ];
 
   for (const update of updates) {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('rounds')
       .update({
         title: update.title,

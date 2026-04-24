@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppStore } from '../../store/useAppStore';
 import { RoundCard } from '../../components/RoundCard';
 import { Badge } from '../../components/ui/Badge';
-import { ShieldCheck, BarChart4, Fingerprint, Target, Activity, ArrowRight } from 'lucide-react';
+import { ShieldCheck, BarChart4, Target, Activity, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 
