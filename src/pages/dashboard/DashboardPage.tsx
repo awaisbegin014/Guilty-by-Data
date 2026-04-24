@@ -44,7 +44,7 @@ export const DashboardPage: React.FC = () => {
                                     <ShieldCheck size={24} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black text-white uppercase tracking-tight">Case Dossier: Ashworth</h2>
+                                    <h2 className="text-xl font-black text-white uppercase tracking-tight">The Ashworth Affair</h2>
                                     <p className="text-[0.6rem] font-black font-mono text-muted-foreground uppercase tracking-widest mt-1">Ref No: #7492-OMEGA-ANALYTICS</p>
                                 </div>
                             </div>
@@ -52,10 +52,9 @@ export const DashboardPage: React.FC = () => {
                         
                         <div className="p-10 space-y-12">
                             <p className="text-lg text-slate-300 leading-relaxed font-medium max-w-4xl">
-                                Richard Ashworth, lead architect of Ashworth Dynamics, has been discovered deceased. 
-                                Initial forensics suggest a highly coordinated digital breach preceded the event. 
-                                Your team must parse recovered server logs and financial transactions to determine 
-                                culpability and motive.
+                                <strong className="text-white">Victor Ashworth</strong>, billionaire founder of Ashworth Pharmaceuticals, has been murdered.
+                                <br /><br />
+                                Victor was found poisoned with a rare chemical called thallium sulfate. The doctor says the poison was given to him 3 to 4 days before he died. This means the killer planned it carefully. The killer works inside the company and knows a lot about chemicals. We have grabbed three big sets of data from the company's computers: employee records, money transactions, and secret emails. We need you to look at the clues. Follow the data. Find out who wanted him dead, how they got the poison, and who pulled the trigger.
                             </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -65,7 +64,7 @@ export const DashboardPage: React.FC = () => {
                                         <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Primary Objective</h4>
                                     </div>
                                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                                        Map the movement of illicit data packets and identify the breach source.
+                                        Identify the killer, the weapon, and the motive from the digital wreckage.
                                     </p>
                                 </div>
                                 <div className="p-6 rounded-xl bg-slate-900/20 border border-border">
@@ -74,7 +73,7 @@ export const DashboardPage: React.FC = () => {
                                         <h4 className="text-[0.7rem] font-black text-white uppercase tracking-widest">Scope of Analysis</h4>
                                     </div>
                                     <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                                        Financial ledger anomalies and encrypted metadata extraction.
+                                        Employee HR records, financial transactions, and internal communications.
                                     </p>
                                 </div>
                                 <div className="p-6 rounded-xl bg-slate-900/20 border border-border">
