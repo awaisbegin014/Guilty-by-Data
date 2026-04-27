@@ -38,7 +38,7 @@ For production on Vercel:
 4. Run a quick smoke test after deploy:
    - admin round unlock, start, pause, and reset flow
    - participant submission flow through `/api/submit-round`
-   - leaderboard update after  submission
+   - leaderboard update after submission
 
 This helps confirm both the server route and the latest database changes are active in the deployed environment.
 
