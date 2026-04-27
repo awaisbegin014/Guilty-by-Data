@@ -17,7 +17,7 @@ function getValidationMessage(inputType: 'int' | 'float', value: string) {
   }
 
   if (inputType === 'int') {
-    return /^-?\d+$/.test(value.trim()) ? '' : 'Enter a whole number only.';
+    return /^-?\d+$/.test(value.trim()) ? '' : 'Enter an integer only.';
   }
 
   return /^-?(?:\d+|\d*\.\d+)$/.test(value.trim()) ? '' : 'Enter a valid decimal number.';
@@ -53,8 +53,9 @@ export const BlankQuestion: React.FC<BlankQuestionProps> = ({
     [draftValue, inputType],
   );
 
-  const helperLabel = inputType === 'int' ? 'Whole number only' : 'Decimal values allowed';
+  const helperLabel = inputType === 'int' ? 'Integer only' : 'Decimal values allowed';
   const helperIcon = inputType === 'int' ? <Hash size={12} /> : <Sigma size={12} />;
+  const inputId = `blank-answer-${questionNumber}`;
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,10 +76,11 @@ export const BlankQuestion: React.FC<BlankQuestionProps> = ({
         </div>
 
         <div className="rounded-xl border border-border/60 bg-secondary/10 p-4">
-          <label className="block text-[0.6rem] font-black uppercase tracking-[0.22em] text-slate-400">
+          <label htmlFor={inputId} className="block text-[0.6rem] font-black uppercase tracking-[0.22em] text-slate-400">
             Your Answer
           </label>
           <input
+            id={inputId}
             type="text"
             inputMode={inputType === 'int' ? 'numeric' : 'decimal'}
             autoComplete="off"
@@ -88,6 +90,7 @@ export const BlankQuestion: React.FC<BlankQuestionProps> = ({
               const nextValue = event.target.value;
               if (!isPotentiallyValidInput(inputType, nextValue)) {
                 setDraftValue(nextValue);
+                onChange(nextValue);
                 return;
               }
 
@@ -100,7 +103,7 @@ export const BlankQuestion: React.FC<BlankQuestionProps> = ({
                 ? 'border-red-500/40 focus:border-red-400'
                 : 'border-slate-700 focus:border-primary',
             )}
-            placeholder={inputType === 'int' ? 'Enter a whole number' : 'Enter a decimal number'}
+            placeholder={inputType === 'int' ? 'Enter an integer' : 'Enter a decimal number'}
           />
 
           <div className="mt-3 flex items-start justify-between gap-3">

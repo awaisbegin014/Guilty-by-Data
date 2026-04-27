@@ -330,8 +330,8 @@ export const AdminQuestionManager: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex items-start gap-8">
-        <div className="w-[220px] shrink-0">
+      <div className="flex flex-col items-stretch gap-6 lg:flex-row lg:items-start lg:gap-8">
+        <div className="w-full shrink-0 lg:w-[220px]">
           <p className="mb-3 text-[0.7rem] font-bold uppercase tracking-wider text-slate-400">Select Round</p>
           <div className="space-y-2">
             {rounds.map((round) => {
@@ -705,7 +705,7 @@ export const AdminQuestionManager: React.FC = () => {
                       <RichQuestionText content={question.text} className="pt-0.5 text-slate-100" />
                     </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex gap-1 opacity-100 transition-opacity">
                     <button
                       onClick={() => startEditing(question)}
                       className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition-all hover:border-primary hover:text-white"

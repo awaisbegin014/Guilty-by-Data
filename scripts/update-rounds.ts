@@ -45,7 +45,7 @@ async function main() {
   ];
 
   for (const update of updates) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('rounds')
       .update({
         title: update.title,
@@ -53,10 +53,13 @@ async function main() {
         objective: update.objective,
         case_brief: update.case_brief
       })
-      .eq('order_index', update.order_index);
+      .eq('order_index', update.order_index)
+      .select('id');
 
     if (error) {
       console.error(`Error updating Round ${update.order_index}:`, error.message);
+    } else if (!data || data.length === 0) {
+      console.warn(`No round found for order_index ${update.order_index}`);
     } else {
       console.log(`Successfully updated Round ${update.order_index}`);
     }

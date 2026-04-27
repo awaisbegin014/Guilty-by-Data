@@ -136,7 +136,10 @@ body {
 
 /* Global Background Image */
 .bg-general-image {
-  background-image: url('/general-bg.png');
+  background-image: image-set(
+    url('/general-bg.webp') type('image/webp'),
+    url('/general-bg.png') type('image/png')
+  );
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -145,7 +148,10 @@ body {
 
 /* Auth Background Image */
 .bg-auth-image {
-  background-image: url('/auth-bg.png');
+  background-image: image-set(
+    url('/auth-bg.webp') type('image/webp'),
+    url('/auth-bg.png') type('image/png')
+  );
   background-size: cover;
   background-position: center bottom;
   background-repeat: no-repeat;

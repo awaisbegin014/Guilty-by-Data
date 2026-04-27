@@ -1,5 +1,5 @@
 import type { NodeRequest, NodeResponse } from './_lib/server.js';
-import { authenticateRequest, sendJson } from './_lib/server.js';
+import { authenticateRequest, logServerError, sendJson, sendOptions } from './_lib/server.js';
 import { deriveParticipantRoundStatus } from '../src/lib/roundState.js';
 
 interface RoundRow {
@@ -95,6 +95,11 @@ function toDocumentationSections(value: unknown) {
 }
 
 export default async function handler(request: NodeRequest, response: NodeResponse) {
+  if (request.method === 'OPTIONS') {
+    sendOptions(response, 'GET, OPTIONS');
+    return;
+  }
+
   if (request.method !== 'GET') {
     sendJson(response, 405, { error: 'Method not allowed.' });
     return;
@@ -112,7 +117,8 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     .maybeSingle();
 
   if (teamResult.error) {
-    sendJson(response, 500, { error: teamResult.error.message });
+    logServerError('participant-bundle team lookup', teamResult.error);
+    sendJson(response, 500, { error: 'Unable to verify team account.' });
     return;
   }
 
@@ -122,28 +128,13 @@ export default async function handler(request: NodeRequest, response: NodeRespon
   }
 
   const [
-    roundsResult,
     roundPublicStateResult,
-    questionsResult,
-    optionsResult,
     submissionsResult,
     leaderboardResult,
   ] = await Promise.all([
     auth.supabase
-      .from('rounds')
-      .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, submission_grace_seconds, submission_ends_at, submission_remaining_seconds, starts_at, ends_at, documentation')
-      .order('order_index', { ascending: true }),
-    auth.supabase
       .from('round_public_state')
       .select('round_id, order_index, title, description, status, timer_minutes, timer_state, starts_at, ends_at, timer_remaining_seconds, submission_ends_at, submission_remaining_seconds')
-      .order('order_index', { ascending: true }),
-    auth.supabase
-      .from('questions')
-      .select('id, round_id, order_index, text, type, input_type')
-      .order('order_index', { ascending: true }),
-    auth.supabase
-      .from('options')
-      .select('id, question_id, order_index, text')
       .order('order_index', { ascending: true }),
     auth.supabase
       .from('submissions')
@@ -157,16 +148,13 @@ export default async function handler(request: NodeRequest, response: NodeRespon
       .order('updated_at', { ascending: true }),
   ]);
 
-  if (roundsResult.error || roundPublicStateResult.error || questionsResult.error || optionsResult.error || submissionsResult.error || leaderboardResult.error) {
-    sendJson(response, 500, {
-      error: roundsResult.error?.message
-        || roundPublicStateResult.error?.message
-        || questionsResult.error?.message
-        || optionsResult.error?.message
-        || submissionsResult.error?.message
-        || leaderboardResult.error?.message
-        || 'Failed to load participant bundle.',
+  if (roundPublicStateResult.error || submissionsResult.error || leaderboardResult.error) {
+    logServerError('participant-bundle base load', {
+      roundPublicStateError: roundPublicStateResult.error,
+      submissionsError: submissionsResult.error,
+      leaderboardError: leaderboardResult.error,
     });
+    sendJson(response, 500, { error: 'Failed to load participant bundle.' });
     return;
   }
 
@@ -189,6 +177,86 @@ export default async function handler(request: NodeRequest, response: NodeRespon
     return acc;
   }, {});
 
+  const roundPublicRows = ((roundPublicStateResult.data ?? []) as RoundPublicStateRow[])
+    .slice()
+    .sort((left, right) => left.order_index - right.order_index);
+
+  let previousRoundsAccepted = true;
+  const visibleRoundIds = new Set<string>();
+  const publicRoundStatuses = new Map<string, ReturnType<typeof deriveParticipantRoundStatus>>();
+
+  for (const publicState of roundPublicRows) {
+    const submission = submissionsByRound[publicState.round_id];
+    const acceptedSubmission = submission?.status === 'accepted' ? submission : undefined;
+    const participantRound = {
+      status: publicState.status,
+      timerState: publicState.timer_state,
+      endsAt: publicState.ends_at,
+      submissionEndsAt: publicState.submission_ends_at,
+    };
+    const status = deriveParticipantRoundStatus({
+      round: participantRound,
+      sequentiallyAvailable: previousRoundsAccepted,
+      submission: acceptedSubmission,
+      hasDraftActivity: false,
+      now: Date.now(),
+    });
+
+    publicRoundStatuses.set(publicState.round_id, status);
+    if (status === 'submitted' || status === 'available' || status === 'in_progress') {
+      visibleRoundIds.add(publicState.round_id);
+    }
+
+    previousRoundsAccepted = previousRoundsAccepted && Boolean(acceptedSubmission);
+  }
+
+  const visibleRoundIdList = Array.from(visibleRoundIds);
+  const [
+    roundsResult,
+    questionsResult,
+  ] = visibleRoundIdList.length
+    ? await Promise.all([
+      auth.supabase
+        .from('rounds')
+        .select('id, order_index, title, description, objective, case_brief, zip_password, status, timer_minutes, timer_state, timer_duration_seconds, timer_remaining_seconds, submission_grace_seconds, submission_ends_at, submission_remaining_seconds, starts_at, ends_at, documentation')
+        .in('id', visibleRoundIdList)
+        .order('order_index', { ascending: true }),
+      auth.supabase
+        .from('questions')
+        .select('id, round_id, order_index, text, type, input_type')
+        .in('round_id', visibleRoundIdList)
+        .order('order_index', { ascending: true }),
+    ])
+    : [
+      { data: [], error: null },
+      { data: [], error: null },
+    ];
+
+  if (roundsResult.error || questionsResult.error) {
+    logServerError('participant-bundle content load', {
+      roundsError: roundsResult.error,
+      questionsError: questionsResult.error,
+    });
+    sendJson(response, 500, { error: 'Failed to load participant round content.' });
+    return;
+  }
+
+  const questionRows = (questionsResult.data ?? []) as QuestionRow[];
+  const questionIdList = questionRows.map((question) => question.id);
+  const optionsResult = questionIdList.length
+    ? await auth.supabase
+      .from('options')
+      .select('id, question_id, order_index, text')
+      .in('question_id', questionIdList)
+      .order('order_index', { ascending: true })
+    : { data: [], error: null };
+
+  if (optionsResult.error) {
+    logServerError('participant-bundle options load', optionsResult.error);
+    sendJson(response, 500, { error: 'Failed to load participant options.' });
+    return;
+  }
+
   const optionsByQuestionId = new Map<string, OptionRow[]>();
   for (const row of (optionsResult.data ?? []) as OptionRow[]) {
     const group = optionsByQuestionId.get(row.question_id) ?? [];
@@ -197,38 +265,23 @@ export default async function handler(request: NodeRequest, response: NodeRespon
   }
 
   const questionsByRoundId = new Map<string, QuestionRow[]>();
-  for (const row of (questionsResult.data ?? []) as QuestionRow[]) {
+  for (const row of questionRows) {
     const group = questionsByRoundId.get(row.round_id) ?? [];
     group.push(row);
     questionsByRoundId.set(row.round_id, group);
   }
 
-  const roundPublicStateById = new Map<string, RoundPublicStateRow>();
-  for (const row of (roundPublicStateResult.data ?? []) as RoundPublicStateRow[]) {
-    roundPublicStateById.set(row.round_id, row);
+  const roundRowsById = new Map<string, RoundRow>();
+  for (const row of (roundsResult.data ?? []) as RoundRow[]) {
+    roundRowsById.set(row.id, row);
   }
 
-  let previousRoundsSubmitted = true;
-  const rounds = ((roundsResult.data ?? []) as RoundRow[]).map((row) => {
-    const publicState = roundPublicStateById.get(row.id);
-    const submission = submissionsByRound[row.id];
-    const participantRound = {
-      status: publicState?.status ?? row.status,
-      timerState: publicState?.timer_state ?? row.timer_state,
-      endsAt: publicState?.ends_at ?? row.ends_at,
-      submissionEndsAt: publicState?.submission_ends_at ?? row.submission_ends_at,
-    };
-    const status = deriveParticipantRoundStatus({
-      round: participantRound,
-      sequentiallyAvailable: previousRoundsSubmitted,
-      submission,
-      hasDraftActivity: false,
-      now: Date.now(),
-    });
-    const contentVisible = status === 'submitted' || status === 'available' || status === 'in_progress';
-    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
+  const rounds = roundPublicRows.map((publicState) => {
+    const row = roundRowsById.get(publicState.round_id);
+    const contentVisible = visibleRoundIds.has(publicState.round_id) && Boolean(row);
+    const sanitizedTimerMinutes = contentVisible ? publicState.timer_minutes : 0;
 
-    const roundQuestions = (questionsByRoundId.get(row.id) ?? []).map((question) => ({
+    const roundQuestions = contentVisible && row ? (questionsByRoundId.get(row.id) ?? []).map((question) => ({
       id: question.id,
       roundId: question.round_id,
       questionIndex: question.order_index,
@@ -241,27 +294,27 @@ export default async function handler(request: NodeRequest, response: NodeRespon
         score: 0,
         orderIndex: option.order_index,
       })),
-    }));
+    })) : [];
 
     return {
-      id: row.id,
-      orderIndex: publicState?.order_index ?? row.order_index,
-      title: publicState?.title ?? row.title,
-      description: publicState?.description ?? row.description ?? '',
-      objective: contentVisible ? row.objective ?? '' : '',
-      caseBrief: contentVisible ? row.case_brief ?? '' : '',
-      zipPassword: contentVisible ? row.zip_password : null,
-      documentation: contentVisible ? toDocumentationSections(row.documentation) : [],
-      status: participantRound.status,
-      timerMinutes: publicState?.timer_minutes ?? row.timer_minutes,
-      timerState: participantRound.timerState,
-      timerDurationSeconds: row.timer_duration_seconds,
-      timerRemainingSeconds: publicState?.timer_remaining_seconds ?? row.timer_remaining_seconds,
-      submissionGraceSeconds: row.submission_grace_seconds ?? 60,
-      submissionEndsAt: publicState?.submission_ends_at ?? row.submission_ends_at,
-      submissionRemainingSeconds: publicState?.submission_remaining_seconds ?? row.submission_remaining_seconds,
-      startsAt: publicState?.starts_at ?? row.starts_at,
-      endsAt: participantRound.endsAt,
+      id: publicState.round_id,
+      orderIndex: publicState.order_index,
+      title: contentVisible ? row?.title ?? `Round ${publicState.order_index}` : `Round ${publicState.order_index}`,
+      description: contentVisible ? row?.description ?? '' : '',
+      objective: contentVisible ? row?.objective ?? '' : '',
+      caseBrief: contentVisible ? row?.case_brief ?? '' : '',
+      zipPassword: contentVisible ? row?.zip_password ?? null : null,
+      documentation: contentVisible ? toDocumentationSections(row?.documentation) : [],
+      status: contentVisible ? publicState.status : 'draft',
+      timerMinutes: sanitizedTimerMinutes,
+      timerState: contentVisible ? publicState.timer_state : 'idle',
+      timerDurationSeconds: contentVisible ? row?.timer_duration_seconds ?? publicState.timer_minutes * 60 : 0,
+      timerRemainingSeconds: contentVisible ? publicState.timer_remaining_seconds : null,
+      submissionGraceSeconds: row?.submission_grace_seconds ?? 60,
+      submissionEndsAt: contentVisible ? publicState.submission_ends_at : null,
+      submissionRemainingSeconds: contentVisible ? publicState.submission_remaining_seconds : null,
+      startsAt: contentVisible ? publicState.starts_at : null,
+      endsAt: contentVisible ? publicState.ends_at : null,
       questionCount: roundQuestions.length,
       contentVisible,
       questions: contentVisible ? roundQuestions : [],

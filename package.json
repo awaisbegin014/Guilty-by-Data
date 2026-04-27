@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "npm run lint && npm run build",
     "preview": "vite preview",
+    "update:rounds": "tsx scripts/update-rounds.ts",
     "seed:teams": "tsx scripts/seed-teams.ts",
     "cleanup:teams": "tsx scripts/cleanup-teams.ts"
   },

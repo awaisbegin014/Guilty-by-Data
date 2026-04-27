@@ -46,7 +46,7 @@ export const AdminLoginPage: React.FC = () => {
                             <picture>
                                 <source type="image/webp" srcSet="/logo-96.webp 1x, /logo-160.webp 2x" />
                                 <source type="image/png" srcSet="/logo-96.png 1x, /logo-160.png 2x" />
-                                <img src="/logo-96.png" alt="Guilty By Data Logo" className="h-full w-full object-cover" width="44" height="44" />
+                                <img src="/logo-96.webp" alt="Guilty By Data Logo" className="h-full w-full object-cover" width="44" height="44" />
                             </picture>
                         </div>
                         <div className="min-w-0">

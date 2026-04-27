@@ -41,7 +41,7 @@ export const McqQuestion: React.FC<McqQuestionProps> = ({
                 <p className="text-[0.55rem] font-black font-mono text-muted-foreground uppercase tracking-[0.25em] mb-3">
                     Select Response
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {options.map((option, idx) => {
                         const letter = String.fromCharCode(65 + idx);
                         const isSelected = selectedOptionId === option.id;

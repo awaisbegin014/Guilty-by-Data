@@ -74,6 +74,7 @@ export const QuestionPage: React.FC = () => {
 
     const answeredCount = Object.keys(progress?.answers || {}).length;
     const missingAnswers = round.questions.length - answeredCount;
+    const submitDialogTitleId = 'final-submit-dialog-title';
 
     return (
         <div className="pb-8 min-h-full flex flex-col">
@@ -140,20 +141,20 @@ export const QuestionPage: React.FC = () => {
                 </div>
 
                 {/* Navigation / Action Bar */}
-                <div className="flex items-center justify-between gap-4 p-4 bg-slate-900/40 border border-border rounded-xl shrink-0">
-                    <Button variant="secondary" size="sm" onClick={handlePrev} className="min-w-[150px] h-9 text-[0.65rem] tracking-widest uppercase">
+                <div className="flex flex-col items-stretch justify-between gap-3 p-4 bg-slate-900/40 border border-border rounded-xl shrink-0 sm:flex-row sm:items-center sm:gap-4">
+                    <Button variant="secondary" size="sm" onClick={handlePrev} className="h-9 w-full text-[0.65rem] tracking-widest uppercase sm:w-auto sm:min-w-[150px]">
                         <span className="flex items-center gap-2">
                             <ArrowLeft size={14} />
                             <span>{isFirstQuestion ? 'Case Brief' : 'Prev'}</span>
                         </span>
                     </Button>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-2 text-center sm:text-left">
                         <Info size={13} className="text-primary shrink-0" />
                         <p className="text-[0.5rem] text-muted-foreground font-black uppercase tracking-widest leading-tight">
                             Findings stored locally until submission.
                         </p>
                     </div>
-                    <Button variant="primary" size="sm" onClick={handleNext} className="min-w-[150px] h-9 text-[0.65rem] tracking-widest uppercase">
+                    <Button variant="primary" size="sm" onClick={handleNext} className="h-9 w-full text-[0.65rem] tracking-widest uppercase sm:w-auto sm:min-w-[150px]">
                         {isLastQuestion ? (
                             <span className="flex items-center gap-2">
                                 <Fingerprint size={14} />
@@ -172,14 +173,19 @@ export const QuestionPage: React.FC = () => {
             {/* Submission Protocol Modal */}
             {showSubmitModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-background/80">
-                    <div className="dossier-card rounded-xl max-w-[480px] w-full shadow-2xl relative z-50 overflow-hidden">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby={submitDialogTitleId}
+                        className="dossier-card rounded-xl max-w-[480px] w-full shadow-2xl relative z-50 overflow-hidden"
+                    >
                         <div className="p-10">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="w-12 h-12 rounded border border-destructive/20 bg-destructive/10 flex items-center justify-center text-destructive">
                                     <AlertTriangle size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">Final Protocol</h3>
+                                    <h3 id={submitDialogTitleId} className="text-xl font-black text-white uppercase tracking-tight">Final Protocol</h3>
                                     <span className="case-label text-[0.6rem]">Irreversible Transaction</span>
                                 </div>
                             </div>

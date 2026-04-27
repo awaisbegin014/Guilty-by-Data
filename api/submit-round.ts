@@ -1,6 +1,14 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import type { NodeRequest, NodeResponse } from './_lib/server.js';
-import { authenticateRequest, readBody, sendJson } from './_lib/server.js';
+import {
+  ApiRequestError,
+  authenticateRequest,
+  logServerError,
+  readBody,
+  sendJson,
+  sendOptions,
+} from './_lib/server.js';
+import { isPlainObject, isUuid } from './_lib/validation.js';
 
 interface SubmitAnswer {
   questionId?: string;
@@ -10,6 +18,30 @@ interface SubmitAnswer {
 interface SubmitRoundBody {
   roundId?: string;
   answers?: SubmitAnswer[];
+}
+
+const MAX_ANSWERS = 100;
+const MAX_ANSWER_VALUE_LENGTH = 200;
+
+function safeClientMessage(error: PostgrestError) {
+  const message = error.message || '';
+  const knownMessages = [
+    'Round not found.',
+    'This round is locked.',
+    'This round has not started yet.',
+    'This round is paused.',
+    'This round is not currently accepting submissions.',
+    'This round has expired.',
+    'Previous rounds must be submitted before this round can be submitted.',
+    'Answers payload must be an array.',
+    'Each answer must include questionId and answerValue.',
+    'Duplicate answer provided in submission payload.',
+    'One or more submitted questions do not belong to this round.',
+    'This account is not registered as a team.',
+    'Authenticated user does not match the submitting team.',
+  ];
+
+  return knownMessages.includes(message) ? message : null;
 }
 
 function mapRpcError(error: PostgrestError) {
@@ -29,25 +61,51 @@ function mapRpcError(error: PostgrestError) {
 
   if (error.code === 'P0001' || error.code === '22023') {
     return {
-      status: 403,
-      message: error.message,
+      status: error.code === '22023' ? 400 : 403,
+      message: safeClientMessage(error) ?? 'Round submission was rejected.',
     };
   }
 
+  logServerError('submit-round rpc', error);
   return {
     status: 500,
-    message: error.message || 'Round submission failed.',
+    message: 'Round submission failed.',
   };
+}
+
+function validatePayload(payload: unknown): SubmitRoundBody | null {
+  if (!isPlainObject(payload) || !isUuid(payload.roundId) || !Array.isArray(payload.answers)) {
+    return null;
+  }
+
+  if (payload.answers.length > MAX_ANSWERS) {
+    return null;
+  }
+
+  const questionIds = new Set<string>();
+  for (const answer of payload.answers) {
+    if (!isPlainObject(answer) || !isUuid(answer.questionId) || typeof answer.answerValue !== 'string') {
+      return null;
+    }
+
+    const answerValue = answer.answerValue.trim();
+    if (!answerValue || answerValue.length > MAX_ANSWER_VALUE_LENGTH) {
+      return null;
+    }
+
+    if (questionIds.has(answer.questionId)) {
+      return null;
+    }
+
+    questionIds.add(answer.questionId);
+  }
+
+  return payload as SubmitRoundBody;
 }
 
 export default async function handler(request: NodeRequest<SubmitRoundBody>, response: NodeResponse) {
   if (request.method === 'OPTIONS') {
-    response.setHeader('Allow', 'POST, OPTIONS');
-    response.setHeader('Access-Control-Allow-Origin', '*');
-    response.setHeader('Access-Control-Allow-Headers', 'authorization, content-type');
-    response.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    response.statusCode = 200;
-    response.end();
+    sendOptions(response, 'POST, OPTIONS');
     return;
   }
 
@@ -61,9 +119,20 @@ export default async function handler(request: NodeRequest<SubmitRoundBody>, res
     return;
   }
 
-  const payload = await readBody(request);
-  if (!payload?.roundId || !Array.isArray(payload.answers)) {
-    sendJson(response, 400, { error: 'Request must include roundId and answers.' });
+  let payload: SubmitRoundBody | null = null;
+  try {
+    payload = validatePayload(await readBody(request));
+  } catch (error) {
+    if (error instanceof ApiRequestError) {
+      sendJson(response, error.status, { error: error.message });
+      return;
+    }
+
+    logServerError('submit-round readBody', error);
+  }
+
+  if (!payload) {
+    sendJson(response, 400, { error: 'Request must include a valid roundId and answers.' });
     return;
   }
 
@@ -74,7 +143,8 @@ export default async function handler(request: NodeRequest<SubmitRoundBody>, res
     .maybeSingle();
 
   if (teamResult.error) {
-    sendJson(response, 500, { error: teamResult.error.message });
+    logServerError('submit-round team lookup', teamResult.error);
+    sendJson(response, 500, { error: 'Unable to verify team account.' });
     return;
   }
 
@@ -84,11 +154,12 @@ export default async function handler(request: NodeRequest<SubmitRoundBody>, res
   }
 
   const { data, error } = await auth.supabase.rpc('process_round_submission', {
+    p_authenticated_user_id: auth.user.id,
     p_team_id: auth.user.id,
-    p_round_id: payload.roundId,
-    p_answers: payload.answers.map((answer) => ({
-      question_id: answer.questionId ?? null,
-      answer_value: answer.answerValue ?? null,
+    p_round_id: payload.roundId!,
+    p_answers: payload.answers!.map((answer) => ({
+      question_id: answer.questionId!,
+      answer_value: answer.answerValue?.trim(),
     })),
   });
 

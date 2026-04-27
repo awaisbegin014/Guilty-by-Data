@@ -82,7 +82,7 @@ export function deriveParticipantRoundStatus(params: {
     now = Date.now(),
   } = params;
 
-  if (submission) {
+  if (submission?.status === 'accepted') {
     return 'submitted';
   }
 

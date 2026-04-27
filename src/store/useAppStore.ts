@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import {
   deleteQuestion as deleteQuestionRequest,
   fetchAdminRounds,
@@ -224,12 +224,13 @@ function buildParticipantState(
   for (const round of sortedRounds) {
     const draft = drafts[round.id] ?? createEmptyDraftProgress();
     const submission = submissionsByRound[round.id];
+    const acceptedSubmission = submission?.status === 'accepted' ? submission : undefined;
     const sequentiallyAvailable = !competitionConfig.sequentialRoundUnlock || previousRoundsSubmitted;
     const hasDraftActivity = Object.keys(draft.answers).length > 0 || draft.docsVisited || draft.resourceViewed;
     const status = deriveParticipantRoundStatus({
       round,
       sequentiallyAvailable,
-      submission,
+      submission: acceptedSubmission,
       hasDraftActivity,
       now,
     });
@@ -243,13 +244,13 @@ function buildParticipantState(
       roundId: round.id,
       status,
       answers: draft.answers,
-      submittedAt: submission?.submittedAt ?? null,
-      timeTakenSeconds: submission?.timeTakenSeconds ?? null,
+      submittedAt: acceptedSubmission?.submittedAt ?? null,
+      timeTakenSeconds: acceptedSubmission?.timeTakenSeconds ?? null,
       docsVisited: draft.docsVisited,
       resourceViewed: draft.resourceViewed,
     };
 
-    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(submission);
+    previousRoundsSubmitted = previousRoundsSubmitted && Boolean(acceptedSubmission);
   }
 
   return {
@@ -296,6 +297,7 @@ interface AppState {
   unlockedRounds: string[];
   roundsProgress: Record<string, RoundProgress>;
   submissionsByRound: Record<string, RoundSubmission>;
+  draftOwnerTeamId: string | null;
   draftProgressByRound: Record<string, DraftRoundProgress>;
   bootstrapApp: () => Promise<void>;
   loginTeam: (identifier: string, password: string) => Promise<void>;
@@ -331,7 +333,7 @@ interface AppState {
 }
 
 function withDerivedParticipantState(
-  state: Pick<AppState, 'team' | 'rounds' | 'draftProgressByRound' | 'submissionsByRound' | 'serverTimeOffsetMs'>,
+  state: Pick<AppState, 'team' | 'rounds' | 'draftOwnerTeamId' | 'draftProgressByRound' | 'submissionsByRound' | 'serverTimeOffsetMs'>,
   updates: Partial<Pick<AppState, 'rounds' | 'draftProgressByRound' | 'submissionsByRound'>>,
 ) {
   if (!state.team) {
@@ -339,7 +341,8 @@ function withDerivedParticipantState(
   }
 
   const rounds = updates.rounds ?? state.rounds;
-  const draftProgressByRound = updates.draftProgressByRound ?? state.draftProgressByRound;
+  const currentTeamDrafts = state.draftOwnerTeamId === state.team.id ? state.draftProgressByRound : {};
+  const draftProgressByRound = updates.draftProgressByRound ?? currentTeamDrafts;
   const submissionsByRound = updates.submissionsByRound ?? state.submissionsByRound;
 
   return {
@@ -361,42 +364,44 @@ function withParticipantState(
 
 function applyRoundPublicState(rounds: Round[], row: RoundPublicStateSyncRow) {
   const existing = rounds.find((round) => round.id === row.round_id);
+  const canShowMetadata = Boolean(existing?.contentVisible);
+  const sanitizedTimerMinutes = canShowMetadata ? row.timer_minutes : existing?.timerMinutes ?? 0;
   const nextRound: Round = existing
     ? {
       ...existing,
       orderIndex: row.order_index,
-      title: row.title,
-      description: row.description ?? '',
-      status: row.status,
-      timerMinutes: row.timer_minutes,
-      timerState: row.timer_state,
-      timerRemainingSeconds: row.timer_remaining_seconds,
-      submissionEndsAt: row.submission_ends_at,
-      submissionRemainingSeconds: row.submission_remaining_seconds,
-      startsAt: row.starts_at,
-      endsAt: row.ends_at,
+      title: canShowMetadata ? row.title : existing.title || `Round ${row.order_index}`,
+      description: canShowMetadata ? row.description ?? '' : existing.description,
+      status: canShowMetadata ? row.status : existing.status,
+      timerMinutes: sanitizedTimerMinutes,
+      timerState: canShowMetadata ? row.timer_state : existing.timerState,
+      timerRemainingSeconds: canShowMetadata ? row.timer_remaining_seconds : existing.timerRemainingSeconds,
+      submissionEndsAt: canShowMetadata ? row.submission_ends_at : existing.submissionEndsAt,
+      submissionRemainingSeconds: canShowMetadata ? row.submission_remaining_seconds : existing.submissionRemainingSeconds,
+      startsAt: canShowMetadata ? row.starts_at : existing.startsAt,
+      endsAt: canShowMetadata ? row.ends_at : existing.endsAt,
     }
     : {
       id: row.round_id,
       orderIndex: row.order_index,
-      title: row.title,
-      description: row.description ?? '',
+      title: `Round ${row.order_index}`,
+      description: '',
       objective: '',
       caseBrief: '',
       zipPassword: null,
       documentation: [],
-      status: row.status,
-      timerMinutes: row.timer_minutes,
-      timerState: row.timer_state,
-      timerDurationSeconds: row.timer_minutes * 60,
-      timerRemainingSeconds: row.timer_remaining_seconds,
+      status: 'draft',
+      timerMinutes: 0,
+      timerState: 'idle',
+      timerDurationSeconds: 0,
+      timerRemainingSeconds: null,
       submissionGraceSeconds: 60,
-      submissionEndsAt: row.submission_ends_at,
-      submissionRemainingSeconds: row.submission_remaining_seconds,
-      startsAt: row.starts_at,
-      endsAt: row.ends_at,
+      submissionEndsAt: null,
+      submissionRemainingSeconds: null,
+      startsAt: null,
+      endsAt: null,
       questionCount: 0,
-      contentVisible: true,
+      contentVisible: false,
       questions: [],
     };
 
@@ -669,6 +674,7 @@ export const useAppStore = create<AppState>()(
       unlockedRounds: [],
       roundsProgress: {},
       submissionsByRound: {},
+      draftOwnerTeamId: null,
       draftProgressByRound: {},
 
       bootstrapApp: async () => {
@@ -690,23 +696,31 @@ export const useAppStore = create<AppState>()(
               loadParticipantBundle(),
               loadServerTimeOffset(fallbackOffsetMs),
             ]);
-            set((state) => ({
-              authReady: true,
-              isBootstrapping: false,
-              serverTimeOffsetMs,
-              team: participantBundle.team,
-              admin: null,
-              isAdmin: false,
-              rounds: participantBundle.rounds,
-              leaderboard: participantBundle.leaderboard,
-              submissionsByRound: participantBundle.submissionsByRound,
-              ...buildParticipantState(
-                participantBundle.rounds,
-                state.draftProgressByRound,
-                participantBundle.submissionsByRound,
-                Date.now() + serverTimeOffsetMs,
-              ),
-            }));
+            set((state) => {
+              const draftProgressByRound = state.draftOwnerTeamId === participantBundle.team.id
+                ? state.draftProgressByRound
+                : {};
+
+              return {
+                authReady: true,
+                isBootstrapping: false,
+                serverTimeOffsetMs,
+                team: participantBundle.team,
+                admin: null,
+                isAdmin: false,
+                rounds: participantBundle.rounds,
+                leaderboard: participantBundle.leaderboard,
+                submissionsByRound: participantBundle.submissionsByRound,
+                draftOwnerTeamId: participantBundle.team.id,
+                draftProgressByRound,
+                ...buildParticipantState(
+                  participantBundle.rounds,
+                  draftProgressByRound,
+                  participantBundle.submissionsByRound,
+                  Date.now() + serverTimeOffsetMs,
+                ),
+              };
+            });
             return;
           }
 
@@ -727,6 +741,8 @@ export const useAppStore = create<AppState>()(
               submissionsByRound: {},
               unlockedRounds: [],
               roundsProgress: {},
+              draftOwnerTeamId: null,
+              draftProgressByRound: {},
             });
             return;
           }
@@ -743,6 +759,8 @@ export const useAppStore = create<AppState>()(
             submissionsByRound: {},
             unlockedRounds: [],
             roundsProgress: {},
+            draftOwnerTeamId: null,
+            draftProgressByRound: {},
           });
         } catch (error) {
           set({
@@ -758,6 +776,8 @@ export const useAppStore = create<AppState>()(
             submissionsByRound: {},
             unlockedRounds: [],
             roundsProgress: {},
+            draftOwnerTeamId: null,
+            draftProgressByRound: {},
           });
         }
       },
@@ -776,23 +796,31 @@ export const useAppStore = create<AppState>()(
             loadServerTimeOffset(fallbackOffsetMs),
           ]);
 
-          set((state) => ({
-            authReady: true,
-            isBootstrapping: false,
-            serverTimeOffsetMs,
-            team: participantBundle.team,
-            admin: null,
-            isAdmin: false,
-            rounds: participantBundle.rounds,
-            leaderboard: participantBundle.leaderboard,
-            submissionsByRound: participantBundle.submissionsByRound,
-            ...buildParticipantState(
-              participantBundle.rounds,
-              state.draftProgressByRound,
-              participantBundle.submissionsByRound,
-              Date.now() + serverTimeOffsetMs,
-            ),
-          }));
+          set((state) => {
+            const draftProgressByRound = state.draftOwnerTeamId === participantBundle.team.id
+              ? state.draftProgressByRound
+              : {};
+
+            return {
+              authReady: true,
+              isBootstrapping: false,
+              serverTimeOffsetMs,
+              team: participantBundle.team,
+              admin: null,
+              isAdmin: false,
+              rounds: participantBundle.rounds,
+              leaderboard: participantBundle.leaderboard,
+              submissionsByRound: participantBundle.submissionsByRound,
+              draftOwnerTeamId: participantBundle.team.id,
+              draftProgressByRound,
+              ...buildParticipantState(
+                participantBundle.rounds,
+                draftProgressByRound,
+                participantBundle.submissionsByRound,
+                Date.now() + serverTimeOffsetMs,
+              ),
+            };
+          });
         } catch (error) {
           set({
             isBootstrapping: false,
@@ -828,6 +856,8 @@ export const useAppStore = create<AppState>()(
             submissionsByRound: {},
             unlockedRounds: [],
             roundsProgress: {},
+            draftOwnerTeamId: null,
+            draftProgressByRound: {},
           });
         } catch (error) {
           set({
@@ -852,6 +882,7 @@ export const useAppStore = create<AppState>()(
           unlockedRounds: [],
           roundsProgress: {},
           submissionsByRound: {},
+          draftOwnerTeamId: null,
           draftProgressByRound: {},
         });
       },
@@ -978,7 +1009,7 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const submissionsByRound = applySubmissionRecord(state.submissionsByRound, eventType, row);
           const draftProgressByRound = { ...state.draftProgressByRound };
-          if (eventType !== 'DELETE') {
+          if (eventType !== 'DELETE' && row.status === 'accepted') {
             delete draftProgressByRound[row.round_id];
           }
 
@@ -997,7 +1028,14 @@ export const useAppStore = create<AppState>()(
 
       setAnswer: (roundId, questionId, answerValue) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
+          if (!state.team) {
+            return {};
+          }
+
+          const currentDrafts = state.draftOwnerTeamId === state.team.id
+            ? state.draftProgressByRound
+            : {};
+          const existing = currentDrafts[roundId] ?? createEmptyDraftProgress();
           const nextAnswers = {
             ...existing.answers,
           };
@@ -1009,7 +1047,7 @@ export const useAppStore = create<AppState>()(
           }
 
           const draftProgressByRound = {
-            ...state.draftProgressByRound,
+            ...currentDrafts,
             [roundId]: {
               ...existing,
               answers: nextAnswers,
@@ -1017,6 +1055,7 @@ export const useAppStore = create<AppState>()(
           };
 
           return {
+            draftOwnerTeamId: state.team.id,
             draftProgressByRound,
             ...buildParticipantState(
               state.rounds,
@@ -1030,9 +1069,16 @@ export const useAppStore = create<AppState>()(
 
       markDocsVisited: (roundId) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
+          if (!state.team) {
+            return {};
+          }
+
+          const currentDrafts = state.draftOwnerTeamId === state.team.id
+            ? state.draftProgressByRound
+            : {};
+          const existing = currentDrafts[roundId] ?? createEmptyDraftProgress();
           const draftProgressByRound = {
-            ...state.draftProgressByRound,
+            ...currentDrafts,
             [roundId]: {
               ...existing,
               docsVisited: true,
@@ -1040,6 +1086,7 @@ export const useAppStore = create<AppState>()(
           };
 
           return {
+            draftOwnerTeamId: state.team.id,
             draftProgressByRound,
             ...buildParticipantState(
               state.rounds,
@@ -1053,9 +1100,16 @@ export const useAppStore = create<AppState>()(
 
       markResourceViewed: (roundId) => {
         set((state) => {
-          const existing = state.draftProgressByRound[roundId] ?? createEmptyDraftProgress();
+          if (!state.team) {
+            return {};
+          }
+
+          const currentDrafts = state.draftOwnerTeamId === state.team.id
+            ? state.draftProgressByRound
+            : {};
+          const existing = currentDrafts[roundId] ?? createEmptyDraftProgress();
           const draftProgressByRound = {
-            ...state.draftProgressByRound,
+            ...currentDrafts,
             [roundId]: {
               ...existing,
               resourceViewed: true,
@@ -1063,6 +1117,7 @@ export const useAppStore = create<AppState>()(
           };
 
           return {
+            draftOwnerTeamId: state.team.id,
             draftProgressByRound,
             ...buildParticipantState(
               state.rounds,
@@ -1106,12 +1161,17 @@ export const useAppStore = create<AppState>()(
 
             return {
               isSubmitting: false,
+              draftOwnerTeamId: state.team?.id ?? state.draftOwnerTeamId,
               ...withDerivedParticipantState(state, {
                 draftProgressByRound,
                 submissionsByRound,
               }),
             };
           });
+
+          if (submission.status === 'accepted') {
+            await get().refreshParticipantData();
+          }
         } catch (error) {
           set({
             isSubmitting: false,
@@ -1166,6 +1226,7 @@ export const useAppStore = create<AppState>()(
 
         try {
           await saveQuestionRequest(roundId, question);
+          await get().refreshAdminData();
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Question save failed.',
@@ -1179,6 +1240,7 @@ export const useAppStore = create<AppState>()(
 
         try {
           await deleteQuestionRequest(questionId);
+          await get().refreshAdminData();
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Question deletion failed.',
@@ -1191,6 +1253,7 @@ export const useAppStore = create<AppState>()(
 
       resetLocalDrafts: () => {
         set((state) => ({
+          draftOwnerTeamId: state.team?.id ?? null,
           draftProgressByRound: {},
           ...withParticipantState({
             rounds: state.rounds,
@@ -1203,7 +1266,9 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'guilty-by-data-storage',
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
+        draftOwnerTeamId: state.draftOwnerTeamId,
         draftProgressByRound: state.draftProgressByRound,
       }),
     },

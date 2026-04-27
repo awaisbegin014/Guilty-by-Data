@@ -51,9 +51,8 @@ const AppRoutes: React.FC = () => {
     isAdmin,
     refreshParticipantData,
     refreshAdminData,
+    recomputeParticipantState,
     syncServerClock,
-    syncCorrectAnswerRecord,
-    syncBlankQuestionRuleRecord,
     syncLeaderboardRecord,
     syncOptionRecord,
     syncQuestionRecord,
@@ -97,6 +96,43 @@ const AppRoutes: React.FC = () => {
   }, [refreshParticipantData, team]);
 
   useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshAdminData();
+    }, 15000);
+
+    const handleFocusRefresh = () => {
+      if (document.visibilityState !== 'hidden') {
+        void refreshAdminData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocusRefresh);
+    document.addEventListener('visibilitychange', handleFocusRefresh);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', handleFocusRefresh);
+      document.removeEventListener('visibilitychange', handleFocusRefresh);
+    };
+  }, [isAdmin, refreshAdminData]);
+
+  useEffect(() => {
+    if (!team) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      recomputeParticipantState();
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [recomputeParticipantState, team]);
+
+  useEffect(() => {
     if ((!team && !isAdmin) || !supabase) {
       return;
     }
@@ -138,6 +174,13 @@ const AppRoutes: React.FC = () => {
       }
 
       syncRoundPublicState(row as unknown as Parameters<typeof syncRoundPublicState>[0]);
+      if (team && row.status === 'open') {
+        const now = Date.now();
+        if (now - lastParticipantRefreshRef.current >= 5000) {
+          lastParticipantRefreshRef.current = now;
+          void refreshParticipantData();
+        }
+      }
     };
 
     const handleLeaderboard = (
@@ -200,33 +243,6 @@ const AppRoutes: React.FC = () => {
       syncOptionRecord(payload.eventType, row as unknown as Parameters<typeof syncOptionRecord>[1]);
     };
 
-    const handleCorrectAnswerRecord = (
-      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
-    ) => {
-      syncServerClock(payload.commit_timestamp);
-      const row = getSyncRow(payload);
-      if (!row.question_id) {
-        return;
-      }
-
-      syncCorrectAnswerRecord(payload.eventType, row as unknown as Parameters<typeof syncCorrectAnswerRecord>[1]);
-    };
-
-    const handleBlankQuestionRuleRecord = (
-      payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
-    ) => {
-      syncServerClock(payload.commit_timestamp);
-      const row = getSyncRow(payload);
-      if (!row.question_id) {
-        return;
-      }
-
-      syncBlankQuestionRuleRecord(
-        payload.eventType,
-        row as unknown as Parameters<typeof syncBlankQuestionRuleRecord>[1],
-      );
-    };
-
     let channel = client
       .channel(`app-sync:${team?.id ?? 'admin'}`)
       .on(
@@ -264,16 +280,6 @@ const AppRoutes: React.FC = () => {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'options' },
           handleOptionRecord,
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'correct_answers' },
-          handleCorrectAnswerRecord,
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'blank_question_rules' },
-          handleBlankQuestionRuleRecord,
         );
     }
 
@@ -294,9 +300,8 @@ const AppRoutes: React.FC = () => {
   }, [
     isAdmin,
     refreshAdminData,
+    recomputeParticipantState,
     syncServerClock,
-    syncCorrectAnswerRecord,
-    syncBlankQuestionRuleRecord,
     syncLeaderboardRecord,
     syncOptionRecord,
     syncQuestionRecord,

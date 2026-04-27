@@ -23,6 +23,11 @@ supabase/.temp
 *.njsproj
 *.sln
 *.sw?
+
+# Local Planning and Sample Files
+*sample*.md
+*plan*.md
+.codex
         
 .vercel
 .env*.local
