@@ -1,11 +1,7 @@
 full_name,username,password
-Test User,test,12345678()
-Alpha Squad,alpha,Alpha12345!
-Bravo Team,bravo,Bravo12345!
-Charlie Unit,charlie,Charlie12345!
-Delta Force,delta,Delta12345!
-Echo Group,echo,Echo12345!
-test team,testteam,TestTeam123!
-test team 2,testteam2,TestTeam123!
-test team 3,testteam3,TestTeam123!
-test team 4,testteam4,TestTeam123!
+Leaderboard,leaderboard,Leaderboard_123!
+Guest Team 1,guestteam1,GuestTeam184!
+Guest Team 2,guestteam2,GuestTeam296!
+Guest Team 3,guestteam3,GuestTeam357!
+Guest Team 4,guestteam4,GuestTeam468!
+Guest Team 5,guestteam5,GuestTeam579!

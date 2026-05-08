@@ -27,7 +27,10 @@ supabase/.temp
 # Local Planning and Sample Files
 *sample*.md
 *plan*.md
+Screenshot from *.png
 .codex
+.agents
+AGENTS.md
         
 .vercel
 .env*.local
