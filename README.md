@@ -126,7 +126,7 @@ supabase/migrations/  Database schema, policies, functions, and realtime setup
 - A Supabase project
 - A Vercel account if you want to deploy it
 
-### 1. Install Dependencies
+### 1. Install Dependencie
 
 ```bash
 npm install
